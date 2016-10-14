@@ -14,7 +14,7 @@ matrix:
       env: DOCKER_BASE_IMAGE=python:3.5-slim
     - python: pypy
       # Disable Docker tests on PyPy: there are weird permissions issues
-      env: PYENV_VERSION=pypy-5.4.1 PYENV_VERSION_STRING='PyPy 5.4.1' NO_DOCKER=1 NO_COVERAGE=1
+      env: PYENV_VERSION=pypy-5.4.1 PYENV_VERSION_STRING='PyPy 5.4.1' PYENV_ROOT=~/.travis-pyenv NO_DOCKER=1 NO_COVERAGE=1
 cache:
   - pip
   - directories:
