@@ -25,18 +25,17 @@ RUN { \
 	} > /usr/local/bin/pysu-t \
 	&& chmod +x /usr/local/bin/pysu-t
 
+# FIXME: setuid causes all kinds of weird problems with PyPy and Python 3
 # adjust users so we can make sure the tests are interesting
-RUN set -x \
-	&& python="$(readlink -f "$(which python)")" \
-	&& chgrp nogroup "$python" \
-	&& chmod +s "$python"
+RUN chgrp nogroup "$(which python)" \
+	&& chmod +s "$(which python)"
 USER nobody
 ENV HOME /omg/really/pysu/nowhere
 # now we should be nobody, ALL groups, and have a bogus useless HOME value
 
 RUN id
 
-#RUN pysu-t 0 "0:0:$(id -G root)" "root:root:$(id -Gn root)"
+RUN pysu-t 0 "0:0:$(id -G root)" "root:root:$(id -Gn root)"
 RUN pysu-t 0:0 '0:0:0' 'root:root:root'
 RUN pysu-t root "0:0:$(id -G root)" "root:root:$(id -Gn root)"
 RUN pysu-t 0:root '0:0:0' 'root:root:root'
