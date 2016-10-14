@@ -1,7 +1,11 @@
-language: python
 sudo: required
 services:
   - docker
+# Haven't needed this before to get Docker to work (???)
+# https://github.com/travis-ci/travis-ci/issues/5448
+dist: trusty
+
+language: python
 matrix:
   include:
     - python: '2.7'
