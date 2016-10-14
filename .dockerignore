@@ -1,6 +1,6 @@
 .git
 test-base.dockerfile
-gosu-test.dockerfile
+pysu-test.dockerfile
 .dockerignore
 
 ## Basic Python compiled files, recursively

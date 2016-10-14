@@ -26,8 +26,10 @@ RUN { \
 	&& chmod +x /usr/local/bin/pysu-t
 
 # adjust users so we can make sure the tests are interesting
-RUN chgrp nogroup "$(which python3 || which python)" \
-	&& chmod +s "$(which python3 || which python)"
+RUN set -x \
+	&& python="$(readlink -f "$(which python)")" \
+	&& chgrp nogroup "$python" \
+	&& chmod +s "$python"
 USER nobody
 ENV HOME /omg/really/pysu/nowhere
 # now we should be nobody, ALL groups, and have a bogus useless HOME value
