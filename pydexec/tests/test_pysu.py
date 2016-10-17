@@ -1,60 +1,14 @@
-import grp
 import os
-import pwd
 import subprocess
 
 import pytest
 from testtools.assertions import assert_that
 from testtools.matchers import Equals
 
-# Implement a bunch of ``id`` commands in Python so we aren't running tonnes of
-# subprocesses and our tests run faster.
 
-
-def id_u(user=None):
-    """ Approximate Python ``id -u`` implementation. """
-    if user is None:
-        return os.getuid()
-    return pwd.getpwnam(user).pw_uid
-
-
-def id_un(uid=None):
-    """ Approximate Python ``id -un`` implementation. """
-    if uid is None:
-        uid = os.getuid()
-    return pwd.getpwuid(uid).pw_name
-
-
-def id_g(user=None):
-    """ Approximate Python ``id -g`` implementation. """
-    if user is None:
-        return os.getgid()
-    return pwd.getpwnam(user).pw_gid
-
-
-def id_gn(user=None):
-    """ Approximate Python ``id -gn`` implementation. """
-    return grp.getgrgid(id_g(user)).gr_name
-
-
-def id_G(user=None):
-    """ Approximate Python ``id -G`` implementation. """
-    if user is not None:
-        gids = [g.gr_gid for g in grp.getgrall() if user in g.gr_mem]
-    else:
-        gids = os.getgroups()
-
-    return ' '.join(str(g) for g in os.getgroups()) if gids else id_g(user)
-
-
-def id_Gn(user=None):
-    """ Approximate Python ``id -Gn`` implementation. """
-    if user is not None:
-        groups = [g.gr_name for g in grp.getgrall() if user in g.gr_mem]
-    else:
-        groups = [grp.getgrgid(gid).gr_name for gid in os.getgroups()]
-
-    return ' '.join(groups) if groups else id_gn(user)
+def _id(*args):
+    """ Run an ``id`` command. """
+    return _cmd('id', *args)
 
 
 def pysu_real_ids(user_spec):
@@ -99,11 +53,11 @@ def test_gosu():
     like "games" and "daemon".
     """
     # gosu-t 0 "0:0:$(id -G root)" "root:root:$(id -Gn root)"
-    gosu_t('0', '0:0:%s' % (id_G('root'),), 'root:root:%s' % (id_Gn('root'),))
+    gosu_t('0', '0:0:%s' % (_id('-G', 'root'),), 'root:root:%s' % (_id('-Gn', 'root'),))  # noqa: E501
     # gosu-t 0:0 '0:0:0' 'root:root:root'
     gosu_t('0:0', '0:0:0', 'root:root:root')
     # gosu-t root "0:0:$(id -G root)" "root:root:$(id -Gn root)"
-    gosu_t('root', '0:0:%s' % (id_G('root'),), 'root:root:%s' % (id_Gn('root'),))  # noqa: E501
+    gosu_t('root', '0:0:%s' % (_id('-G', 'root'),), 'root:root:%s' % (_id('-Gn', 'root'),))  # noqa: E501
     # gosu-t 0:root '0:0:0' 'root:root:root'
     gosu_t('0:root', '0:0:0', 'root:root:root')
     # gosu-t root:0 '0:0:0' 'root:root:root'
@@ -111,7 +65,7 @@ def test_gosu():
     # gosu-t root:root '0:0:0' 'root:root:root'
     gosu_t('root:root', '0:0:0', 'root:root:root')
     # gosu-t 1000 "1000:$(id -g):$(id -g)" "1000:$(id -gn):$(id -gn)"
-    gosu_t('1000', '1000:%s:%s' % (id_g(), id_g()), '1000:%s:%s' % (id_gn(), id_gn()))  # noqa: E501
+    gosu_t('1000', '1000:%s:%s' % (_id('-g'), _id('-g')), '1000:%s:%s' % (_id('-gn'), _id('-gn')))  # noqa: E501
     # gosu-t 0:1000 '0:1000:1000' 'root:1000:1000'
     gosu_t('0:1000', '0:1000:1000', 'root:1000:1000')
     # gosu-t 1000:1000 '1000:1000:1000' '1000:1000:1000'
@@ -121,18 +75,18 @@ def test_gosu():
     # gosu-t 1000:root '1000:0:0' '1000:root:root'
     gosu_t('1000:root', '1000:0:0', '1000:root:root')
     # gosu-t 1000:daemon "1000:$(id -g daemon):$(id -g daemon)" '1000:daemon:daemon'  # noqa: E501
-    gosu_t('1000:daemon', '1000:%s:%s' % (id_g('daemon'), id_g('daemon')), '1000:daemon:daemon')  # noqa: E501
+    gosu_t('1000:daemon', '1000:%s:%s' % (_id('-g', 'daemon'), _id('-g', 'daemon')), '1000:daemon:daemon')  # noqa: E501
     # gosu-t games "$(id -u games):$(id -g games):$(id -G games)" 'games:games:games'  # noqa: E501
-    gosu_t('games', '%s:%s:%s' % (id_u('games'), id_g('games'), id_G('games')), 'games:games:games')  # noqa: E501
+    gosu_t('games', '%s:%s:%s' % (_id('-u', 'games'), _id('-g', 'games'), _id('-G', 'games')), 'games:games:games')  # noqa: E501
     # gosu-t games:daemon "$(id -u games):$(id -g daemon):$(id -g daemon)" 'games:daemon:daemon'  # noqa: E501
-    gosu_t('games:daemon', '%s:%s:%s' % (id_u('games'), id_g('daemon'), id_g('daemon')), 'games:daemon:daemon')  # noqa: E501
+    gosu_t('games:daemon', '%s:%s:%s' % (_id('-u', 'games'), _id('-g', 'daemon'), _id('-g', 'daemon')), 'games:daemon:daemon')  # noqa: E501
 
     # gosu-t 0: "0:0:$(id -G root)" "root:root:$(id -Gn root)"
-    gosu_t('0', '0:0:%s' % (id_G('root'),), 'root:root:%s' % (id_Gn('root'),))
+    gosu_t('0', '0:0:%s' % (_id('-G', 'root'),), 'root:root:%s' % (_id('-Gn', 'root'),))  # noqa: E501
     # gosu-t '' "$(id -u):$(id -g):$(id -G)" "$(id -un):$(id -gn):$(id -Gn)"
-    gosu_t('', '%s:%s:%s' % (id_u(), id_g(), id_G()), 'root:root:%s' % (id_Gn('root'),))  # noqa: E501
+    gosu_t('', '%s:%s:%s' % (_id('-u'), _id('-g'), _id('-G')), 'root:root:%s' % (_id('-Gn', 'root'),))  # noqa: E501
     # gosu-t ':0' "$(id -u):0:0" "$(id -un):root:root"
-    gosu_t(':0', '%s:0:0' % (id_u(),), '%s:root:root' % (id_un(),))
+    gosu_t(':0', '%s:0:0' % (_id('-u'),), '%s:root:root' % (_id('-un'),))
 
     # [ "$(gosu 0 env | grep '^HOME=')" = 'HOME=/root' ]
     assert_that(pysu_env_home('0'), Equals(['HOME=/root']))
