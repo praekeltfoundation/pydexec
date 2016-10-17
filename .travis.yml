@@ -35,7 +35,7 @@ before_script:
   - if [[ -z "$NO_COVERAGE" ]]; then COV_OPT='--cov'; fi
 script:
   # Run tests inside a container to get a vaguely consistent environment
-  - docker run --rm -v "$(pwd)":/pydexec $DOCKER_IMAGE /bin/sh -c
+  - docker run --rm -v "$(pwd)":/pydexec -w /pydexec $DOCKER_IMAGE /bin/sh -c
       "pip install -r requirements-dev.txt && pytest $COV_OPT"
   - flake8 .
 
