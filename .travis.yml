@@ -1,12 +1,19 @@
-sudo: required  # Need sudo to run tests that change users
+sudo: required
+services:
+    - docker
+# Haven't needed this before to get Docker to work (???)
+# https://github.com/travis-ci/travis-ci/issues/5448
+dist: trusty
 
 language: python
 matrix:
   include:
     - python: '2.7'
+      env: DOCKER_IMAGE=python:2.7-slim
     - python: '3.5'
+      env: DOCKER_IMAGE=python:3.5-slim
     - python: pypy
-      env: PYENV_VERSION=pypy-5.4.1 PYENV_VERSION_STRING='PyPy 5.4.1' PYENV_ROOT=~/.travis-pyenv NO_COVERAGE=1
+      env: PYENV_VERSION=pypy-5.4.1 PYENV_VERSION_STRING='PyPy 5.4.1' PYENV_ROOT=~/.travis-pyenv DOCKER_IMAGE=pypy:5.4.1-slim NO_COVERAGE=1
 cache:
   - pip
   - directories:
@@ -20,14 +27,16 @@ before_install:
     fi
   - pip install --upgrade pip
 install:
-  - pip install -r requirements-dev.txt
+  - docker pull $DOCKER_IMAGE
+  - pip install flake8
   - if [[ -z "$NO_COVERAGE" ]]; then pip install codecov; fi
 
 before_script:
   - if [[ -z "$NO_COVERAGE" ]]; then COV_OPT='--cov'; fi
 script:
-  # Disable pytest cache to avoid sudo permissions issues
-  - sudo -E env PATH="$PATH" pytest -p no:cacheprovider "$COV_OPT"
+  # Run tests inside a container to get a vaguely consistent environment
+  - docker run --rm -v "$(pwd)":/pydexec $DOCKER_IMAGE /bin/sh -c
+      "pip install -r requirements-dev.txt && pytest $COV_OPT"
   - flake8 .
 
 after_success:
