@@ -27,7 +27,7 @@ before_script:
   - if [[ -z "$NO_COVERAGE" ]]; then COV_OPT='--cov'; fi
 script:
   # Disable pytest cache to avoid sudo permissions issues
-  - sudo -E pytest -p no:cacheprovider "$COV_OPT"
+  - sudo -E env PATH="$PATH" pytest -p no:cacheprovider "$COV_OPT"
   - flake8 .
 
 after_success:
