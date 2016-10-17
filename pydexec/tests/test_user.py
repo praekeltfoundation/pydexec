@@ -1,79 +1,87 @@
 import grp
 import os
 import pwd
+from collections import namedtuple
 
-from testtools import ExpectedException, TestCase
+import pytest
+from testtools import ExpectedException
+from testtools.assertions import assert_that
 from testtools.matchers import Equals, Is
 
 from pydexec.user import User
 
 
-class TestUser(TestCase):
+UserFields = namedtuple(
+    'UserFields', ['uid', 'user', 'gid', 'group', 'home'])
 
-    def setUp(self):
-        super(TestUser, self).setUp()
-        self.current_uid = os.getuid()
-        self.current_gid = os.getgid()
 
-        passwd = pwd.getpwuid(self.current_uid)
-        self.current_user = passwd.pw_name
-        self.current_home = passwd.pw_dir
+class TestUser(object):
+    @pytest.fixture
+    def current_user(self):
+        uid = os.getuid()
+        gid = os.getgid()
+        passwd = pwd.getpwuid(uid)
 
-        group = grp.getgrgid(self.current_gid)
-        self.current_group = group.gr_name
+        return UserFields(
+            uid=uid,
+            user=passwd.pw_name,
+            gid=gid,
+            group=grp.getgrgid(gid).gr_name,
+            home=passwd.pw_dir
+        )
 
-    def test_empty_spec(self):
+    def test_empty_spec(self, current_user):
         user = User.from_spec(u'')
 
-        self.assertThat(user.uid, Equals(self.current_uid))
-        self.assertThat(user.gid, Equals(self.current_gid))
-        self.assertThat(user.sgroups_user, Equals(self.current_user))
-        self.assertThat(user.home, Equals(self.current_home))
+        assert_that(user.uid, Equals(current_user.uid))
+        assert_that(user.gid, Equals(current_user.gid))
+        assert_that(user.sgroups_user, Equals(current_user.user))
+        assert_that(user.home, Equals(current_user.home))
 
     def test_invalid_spec(self):
         with ExpectedException(ValueError,
                                r'Invalid user spec string "::"'):
             User.from_spec(u'::')
 
-    def test_user_only_spec(self):
-        user = User.from_spec(self.current_user)
+    def test_user_only_spec(self, current_user):
+        user = User.from_spec(current_user.user)
 
-        self.assertThat(user.uid, Equals(self.current_uid))
-        self.assertThat(user.gid, Equals(self.current_gid))
-        self.assertThat(user.sgroups_user, Equals(self.current_user))
-        self.assertThat(user.home, Equals(self.current_home))
+        assert_that(user.uid, Equals(current_user.uid))
+        assert_that(user.gid, Equals(current_user.gid))
+        assert_that(user.sgroups_user, Equals(current_user.user))
+        assert_that(user.home, Equals(current_user.home))
 
-    def test_uid_only_spec(self):
-        user = User.from_spec(str(self.current_uid))
+    def test_uid_only_spec(self, current_user):
+        user = User.from_spec(str(current_user.uid))
 
-        self.assertThat(user.uid, Equals(self.current_uid))
-        self.assertThat(user.gid, Equals(self.current_gid))
-        self.assertThat(user.sgroups_user, Equals(self.current_user))
-        self.assertThat(user.home, Equals(self.current_home))
+        assert_that(user.uid, Equals(current_user.uid))
+        assert_that(user.gid, Equals(current_user.gid))
+        assert_that(user.sgroups_user, Equals(current_user.user))
+        assert_that(user.home, Equals(current_user.home))
 
-    def test_group_only_spec(self):
-        user = User.from_spec(u':%s' % (self.current_group,))
+    def test_group_only_spec(self, current_user):
+        user = User.from_spec(u':%s' % (current_user.group,))
 
-        self.assertThat(user.uid, Equals(self.current_uid))
-        self.assertThat(user.gid, Equals(self.current_gid))
+        assert_that(user.uid, Equals(current_user.uid))
+        assert_that(user.gid, Equals(current_user.gid))
         # Explicit group, no supplementary groups user
-        self.assertThat(user.sgroups_user, Is(None))
-        self.assertThat(user.home, Equals(self.current_home))
+        assert_that(user.sgroups_user, Is(None))
+        assert_that(user.home, Equals(current_user.home))
 
-    def test_gid_only_spec(self):
-        user = User.from_spec(u':%s' % (self.current_gid,))
+    def test_gid_only_spec(self, current_user):
+        user = User.from_spec(u':%s' % (current_user.gid,))
 
-        self.assertThat(user.uid, Equals(self.current_uid))
-        self.assertThat(user.gid, Equals(self.current_gid))
+        assert_that(user.uid, Equals(current_user.uid))
+        assert_that(user.gid, Equals(current_user.gid))
         # Explicit group, no supplementary groups user
-        self.assertThat(user.sgroups_user, Is(None))
-        self.assertThat(user.home, Equals(self.current_home))
+        assert_that(user.sgroups_user, Is(None))
+        assert_that(user.home, Equals(current_user.home))
 
     def test_user_without_passwd_spec(self):
         with ExpectedException(KeyError):
             User.from_spec(u'idonotexistihope')
 
-    def test_uid_without_passwd_spec(self):
+    def test_uid_without_passwd_spec(self, current_user):
         # Very inefficiently find a UID that doesn't have a passwd entry
         uid = 1  # Start at 1 since root is usually 0
         while uid in [passwd.pw_uid for passwd in pwd.getpwall()]:
@@ -81,11 +89,11 @@ class TestUser(TestCase):
 
         user = User.from_spec(str(uid))
 
-        self.assertThat(user.uid, Equals(uid))
-        self.assertThat(user.gid, Equals(self.current_gid))
+        assert_that(user.uid, Equals(uid))
+        assert_that(user.gid, Equals(current_user.gid))
         # No passwd entry for user, can't have username or home
-        self.assertThat(user.sgroups_user, Is(None))
-        self.assertThat(user.home, Equals(u'/'))
+        assert_that(user.sgroups_user, Is(None))
+        assert_that(user.home, Equals(u'/'))
 
     def test_uid_too_big_spec(self):
         with ExpectedException(ValueError,

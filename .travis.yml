@@ -1,20 +1,12 @@
-sudo: required
-services:
-  - docker
-# Haven't needed this before to get Docker to work (???)
-# https://github.com/travis-ci/travis-ci/issues/5448
-dist: trusty
+sudo: required  # Need sudo to run tests that change users
 
 language: python
 matrix:
   include:
     - python: '2.7'
-      env: DOCKER_BASE_IMAGE=python:2.7-slim
     - python: '3.5'
-      env: NO_DOCKER=1
     - python: pypy
-      # Disable Docker tests on PyPy: there are weird permissions issues
-      env: PYENV_VERSION=pypy-5.4.1 PYENV_VERSION_STRING='PyPy 5.4.1' PYENV_ROOT=~/.travis-pyenv NO_DOCKER=1 NO_COVERAGE=1
+      env: PYENV_VERSION=pypy-5.4.1 PYENV_VERSION_STRING='PyPy 5.4.1' PYENV_ROOT=~/.travis-pyenv NO_COVERAGE=1
 cache:
   - pip
   - directories:
@@ -34,9 +26,9 @@ install:
 before_script:
   - if [[ -z "$NO_COVERAGE" ]]; then COV_OPT='--cov'; fi
 script:
-  - pytest "$COV_OPT"
+  # Disable pytest cache to avoid sudo permissions issues
+  - sudo -E pytest -p no:cacheprovider "$COV_OPT"
   - flake8 .
-  - if [[ -z "$NO_DOCKER" ]]; then ./docker-test.sh; fi
 
 after_success:
   - if [[ -z "$NO_COVERAGE" ]]; then codecov; fi
