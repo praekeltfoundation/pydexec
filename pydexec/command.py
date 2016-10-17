@@ -32,11 +32,16 @@ class Command(object):
     def run(self):
         cmd = [self._program] + self._args
 
-        # Copy the environment as it could be changed when switching user
-        env = self._env.copy()
-        self._setup_user(env)
+        kwargs = {}
+        if self._user is not None:
+            env = self._env.copy()
+            env['HOME'] = self._user.home
+            kwargs = {
+                'env': env,
+                'preexec_fn': self._user.set_user
+            }
 
-        retcode = Popen(cmd, env=env).wait()
+        retcode = Popen(cmd, **kwargs).wait()
         if retcode:
             raise CalledProcessError(retcode, cmd)
 
@@ -46,11 +51,8 @@ class Command(object):
         """
         cmd = [self._program] + self._args
 
-        # Don't bother copying the environment; we're about to exec
-        self._setup_user(self._env)
+        if self._user is not None:
+            self._user.set_user()
+            self._env['HOME'] = self._user.home
 
         os.execvpe(self._program, cmd, self._env)
-
-    def _setup_user(self, env):
-        if self._user is not None:
-            self._user.set_user(env)

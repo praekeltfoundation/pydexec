@@ -21,7 +21,7 @@ class User(object):
         self.sgroups_user = sgroups_user
         self.home = home
 
-    def set_user(self, env=os.environ):
+    def set_user(self):
         if self.sgroups_user is not None:
             os.initgroups(self.sgroups_user, self.gid)
         else:
@@ -29,8 +29,6 @@ class User(object):
 
         os.setgid(self.gid)
         os.setuid(self.uid)
-
-        env['HOME'] = self.home
 
     @classmethod
     def from_spec(cls, user_spec):
