@@ -95,14 +95,8 @@ def test_gosu():
     isn't a single compiled binary like gosu, so we just run everything as root
     here.
 
-    Another difference is that the gosu tests use the user with UID 1000 to
-    test cases where the user does not have a passwd entry. That UID is a
-    little too common (it exists in Travis build environments) so we test with
-    UID 1234 rather.
-
     These tests will only work on a standard Linux host with known users/groups
-    like "games" and "daemon". They also require that user with UID 1234 does
-    not have a passwd entry.
+    like "games" and "daemon".
     """
     # gosu-t 0 "0:0:$(id -G root)" "root:root:$(id -Gn root)"
     gosu_t('0', '0:0:%s' % (id_G('root'),), 'root:root:%s' % (id_Gn('root'),))
@@ -117,17 +111,17 @@ def test_gosu():
     # gosu-t root:root '0:0:0' 'root:root:root'
     gosu_t('root:root', '0:0:0', 'root:root:root')
     # gosu-t 1000 "1000:$(id -g):$(id -g)" "1000:$(id -gn):$(id -gn)"
-    gosu_t('1234', '1234:%s:%s' % (id_g(), id_g()), '1234:%s:%s' % (id_gn(), id_gn()))  # noqa: E501
+    gosu_t('1000', '1000:%s:%s' % (id_g(), id_g()), '1000:%s:%s' % (id_gn(), id_gn()))  # noqa: E501
     # gosu-t 0:1000 '0:1000:1000' 'root:1000:1000'
-    gosu_t('0:1234', '0:1234:1234', 'root:1234:1234')
+    gosu_t('0:1000', '0:1000:1000', 'root:1000:1000')
     # gosu-t 1000:1000 '1000:1000:1000' '1000:1000:1000'
-    gosu_t('1234:1234', '1234:1234:1234', '1234:1234:1234')
+    gosu_t('1000:1000', '1000:1000:1000', '1000:1000:1000')
     # gosu-t root:1000 '0:1000:1000' 'root:1000:1000'
-    gosu_t('root:1234', '0:1234:1234', 'root:1234:1234')
+    gosu_t('root:1000', '0:1000:1000', 'root:1000:1000')
     # gosu-t 1000:root '1000:0:0' '1000:root:root'
-    gosu_t('1234:root', '1234:0:0', '1234:root:root')
+    gosu_t('1000:root', '1000:0:0', '1000:root:root')
     # gosu-t 1000:daemon "1000:$(id -g daemon):$(id -g daemon)" '1000:daemon:daemon'  # noqa: E501
-    gosu_t('1234:daemon', '1234:%s:%s' % (id_g('daemon'), id_g('daemon')), '1234:daemon:daemon')  # noqa: E501
+    gosu_t('1000:daemon', '1000:%s:%s' % (id_g('daemon'), id_g('daemon')), '1000:daemon:daemon')  # noqa: E501
     # gosu-t games "$(id -u games):$(id -g games):$(id -G games)" 'games:games:games'  # noqa: E501
     gosu_t('games', '%s:%s:%s' % (id_u('games'), id_g('games'), id_G('games')), 'games:games:games')  # noqa: E501
     # gosu-t games:daemon "$(id -u games):$(id -g daemon):$(id -g daemon)" 'games:daemon:daemon'  # noqa: E501
@@ -153,15 +147,15 @@ def test_gosu():
     # [ "$(gosu root:root env | grep '^HOME=')" = 'HOME=/root' ]
     assert_that(pysu_env_home('root:root'), Equals(['HOME=/root']))
     # [ "$(gosu 0:1000 env | grep '^HOME=')" = 'HOME=/root' ]
-    assert_that(pysu_env_home('0:1234'), Equals(['HOME=/root']))
+    assert_that(pysu_env_home('0:1000'), Equals(['HOME=/root']))
     # [ "$(gosu root:1000 env | grep '^HOME=')" = 'HOME=/root' ]
-    assert_that(pysu_env_home('root:1234'), Equals(['HOME=/root']))
+    assert_that(pysu_env_home('root:1000'), Equals(['HOME=/root']))
     # [ "$(gosu 1000 env | grep '^HOME=')" = 'HOME=/' ]
-    assert_that(pysu_env_home('1234'), Equals(['HOME=/']))
+    assert_that(pysu_env_home('1000'), Equals(['HOME=/']))
     # [ "$(gosu 1000:0 env | grep '^HOME=')" = 'HOME=/' ]
-    assert_that(pysu_env_home('1234:0'), Equals(['HOME=/']))
+    assert_that(pysu_env_home('1000:0'), Equals(['HOME=/']))
     # [ "$(gosu 1000:root env | grep '^HOME=')" = 'HOME=/' ]
-    assert_that(pysu_env_home('1234:root'), Equals(['HOME=/']))
+    assert_that(pysu_env_home('1000:root'), Equals(['HOME=/']))
     # [ "$(gosu games env | grep '^HOME=')" = 'HOME=/usr/games' ]
     assert_that(pysu_env_home('games'), Equals(['HOME=/usr/games']))
     # [ "$(gosu games:daemon env | grep '^HOME=')" = 'HOME=/usr/games' ]
