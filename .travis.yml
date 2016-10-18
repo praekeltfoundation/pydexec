@@ -6,38 +6,25 @@ services:
 dist: trusty
 
 language: python
-matrix:
-  include:
-    - python: '2.7'
-      env: DOCKER_IMAGE=python:2.7-slim
-    - python: '3.5'
-      env: DOCKER_IMAGE=python:3.5-slim
-    - python: pypy
-      env: PYENV_VERSION=pypy-5.4.1 PYENV_VERSION_STRING='PyPy 5.4.1' PYENV_ROOT=~/.travis-pyenv DOCKER_IMAGE=pypy:2-5.4.1-slim NO_COVERAGE=1
-cache:
-  - pip
-  - directories:
-    - ~/.pyenv_cache
+env:
+  - DOCKER_IMAGE=python:2.7-slim
+  - DOCKER_IMAGE=python:3.5-slim
+  - DOCKER_IMAGE=pypy:2-5.4.1-slim
 
-before_install:
-  - |
-    if [[ -n "$PYENV_VERSION" ]]; then
-      git clone https://github.com/praekeltfoundation/travis-pyenv.git ~/travis-pyenv
-      source ~/travis-pyenv/setup-pyenv.sh
-    fi
-  - pip install --upgrade pip
 install:
   - docker pull $DOCKER_IMAGE
-  - pip install flake8
-  - if [[ -z "$NO_COVERAGE" ]]; then pip install codecov; fi
+  - pip install codecov
 
 before_script:
   - if [[ -z "$NO_COVERAGE" ]]; then COV_OPT='--cov'; fi
+  - |
+    SCRIPT="set -x \
+      && pip install --no-cache -r requirements-dev.txt \
+      && pytest --cov \
+      && flake8 ."
 script:
   # Run tests inside a container to get a vaguely consistent environment
-  - docker run --rm -v "$(pwd)":/pydexec -w /pydexec $DOCKER_IMAGE /bin/sh -c
-      "pip install -r requirements-dev.txt && pytest $COV_OPT"
-  - flake8 .
+  - docker run --rm -v "$(pwd)":/pydexec -w /pydexec $DOCKER_IMAGE /bin/sh -c "$SCRIPT"
 
 after_success:
-  - if [[ -z "$NO_COVERAGE" ]]; then codecov; fi
+  - codecov
