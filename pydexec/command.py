@@ -18,6 +18,23 @@ class Command(object):
         self._args += list(args)
         return self
 
+    def env(self, env_key, env_val):
+        """
+        Add the environment variable ``env_key`` with the value ``env_val``.
+        """
+        self._env[env_key] = env_val
+        return self
+
+    def env_remove(self, env_key):
+        """ Remove the environment variable ``env_key``. """
+        del self._env[env_key]
+        return self
+
+    def env_clear(self):
+        """ Clear all environment variables. """
+        self._env = {}
+        return self
+
     def user(self, user):
         """
         Set the user to change to before execution. The ``user`` argument

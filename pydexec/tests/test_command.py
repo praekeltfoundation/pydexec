@@ -120,3 +120,39 @@ class TestCommand(object):
         expected_env = env.copy()
         expected_env['HOME'] = '/'
         assert_that(cmd_env, Equals(expected_env))
+
+    def test_env(self, capfd):
+        """
+        When environment variables are added to a command, those variables
+        should reflect in the child process when the command is run.
+        """
+        Command('env').env('FOO', 'bar').run()
+
+        out_lines, _ = captured_lines(capfd)
+        cmd_env = parse_env_output(out_lines)
+        assert_that(cmd_env['FOO'], Equals('bar'))
+
+    def test_env_remove(self, capfd):
+        """
+        When environment variables are removed from a command, those variables
+        should not be present in the child process when the command is run.
+        """
+        cmd = Command('env').env('FOO', 'bar')
+
+        cmd.env_remove('FOO').run()
+
+        out_lines, _ = captured_lines(capfd)
+        cmd_env = parse_env_output(out_lines)
+        assert_that('FOO' in cmd_env, Equals(False))
+
+    def test_env_clear(self, capfd):
+        """
+        When environment variables are cleared from a command, no variables
+        should be present in the child process when the command is run.
+        """
+        cmd = Command('env').env('FOO', 'bar')
+
+        cmd.env_clear().run()
+
+        out_lines, _ = captured_lines(capfd)
+        assert_that(out_lines, Equals([]))
