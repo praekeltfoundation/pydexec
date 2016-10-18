@@ -1,7 +1,9 @@
 # -*- coding: utf-8 -*-
+import os
 import sys
 from subprocess import CalledProcessError
 
+import pytest
 from testtools import ExpectedException
 from testtools.assertions import assert_that
 from testtools.matchers import Equals
@@ -79,3 +81,23 @@ class TestCommand(object):
 
         out_lines, _ = captured_lines(capfd)
         assert_that(out_lines, Equals(['errored']))
+
+    @pytest.mark.skipif(os.getuid() != 0, reason='requires root')
+    def test_switch_user(self, capfd):
+        """
+        When a user is set for the command, the user should be switched to
+        before the command is run.
+        """
+        cmd = (Command('/bin/sh')
+               .args('-c', 'echo "$(id -u):$(id -g):$(id -G)"')
+               .user('1000:1000'))
+        cmd.run()
+
+        out_lines, _ = captured_lines(capfd)
+        assert_that(out_lines, Equals(['1000:1000:1000']))
+
+        # Check that we can still run as other users (haven't demoted whole
+        # Python process to non-root user)
+        cmd.user('0:0').run()
+        out_lines, _ = captured_lines(capfd)
+        assert_that(out_lines, Equals(['0:0:0']))
