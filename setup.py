@@ -8,7 +8,7 @@ setup(
     url='https://github.com/praekeltorg/pydexec',
     author='Jamie Hewland',
     author_email='jamie@praekelt.org',
-    license='Apache License 2.0',
+    license='BSD-3-Clause',
     classifiers=[
         'Development Status :: 3 - Alpha',
         'Intended Audience :: System Administrators',
