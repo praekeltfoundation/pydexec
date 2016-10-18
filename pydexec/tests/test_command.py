@@ -11,6 +11,15 @@ from pydexec.command import Command
 from pydexec.tests.helpers import captured_lines
 
 
+def parse_env_output(out_lines):
+    """ Parse the output of the ``env`` command into a dict. """
+    cmd_env = {}
+    for l in out_lines:
+        env_key, env_val = l.split('=', 1)
+        cmd_env[env_key] = env_val
+    return cmd_env
+
+
 class TestCommand(object):
     # Use pytest-style tests rather than testtools so that we can capture
     # stdout/stderr from the file descriptors.
@@ -62,8 +71,21 @@ class TestCommand(object):
         out_lines, _ = captured_lines(capfd)
         assert_that(out_lines, Equals(['errored']))
 
+    def test_run_preserves_environment(self, capfd):
+        """
+        When a command is run, the environment variables of the parent process
+        are preserved.
+        """
+        env = dict(os.environ)
+        Command('env').run()
+
+        out_lines, _ = captured_lines(capfd)
+        cmd_env = parse_env_output(out_lines)
+
+        assert_that(cmd_env, Equals(env))
+
     @pytest.mark.skipif(os.getuid() != 0, reason='requires root')
-    def test_switch_user(self, capfd):
+    def test_run_switch_user(self, capfd):
         """
         When a user is set for the command, the user should be switched to
         before the command is run.
@@ -81,3 +103,20 @@ class TestCommand(object):
         cmd.user('0:0').run()
         out_lines, _ = captured_lines(capfd)
         assert_that(out_lines, Equals(['0:0:0']))
+
+    @pytest.mark.skipif(os.getuid() != 0, reason='requires root')
+    def test_run_switch_user_preserves_environment(self, capfd):
+        """
+        When a command is run and a user is set, the environment variables of
+        the parent process are preserved, except for the ``HOME`` variable
+        which is updated to the user's home directory path.
+        """
+        env = dict(os.environ)
+        cmd = Command('env')
+        cmd.user('1000:1000').run()
+
+        out_lines, _ = captured_lines(capfd)
+        cmd_env = parse_env_output(out_lines)
+        expected_env = env.copy()
+        expected_env['HOME'] = '/'
+        assert_that(cmd_env, Equals(expected_env))

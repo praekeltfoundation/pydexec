@@ -32,7 +32,7 @@ class Command(object):
     def run(self):
         cmd = [self._program] + self._args
 
-        kwargs = {}
+        kwargs = {'env': self._env}
         if self._user is not None:
             env = self._env.copy()
             env['HOME'] = self._user.home
