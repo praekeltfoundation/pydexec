@@ -2,8 +2,12 @@ import os
 import subprocess
 
 import pytest
+from testtools import ExpectedException
 from testtools.assertions import assert_that
-from testtools.matchers import Equals
+from testtools.matchers import Equals, MatchesStructure
+
+from pydexec.pysu import main
+from pydexec.tests.helpers import captured_lines
 
 
 def _id(*args):
@@ -114,3 +118,21 @@ def test_gosu():
     assert_that(pysu_env_home('games'), Equals(['HOME=/usr/games']))
     # [ "$(gosu games:daemon env | grep '^HOME=')" = 'HOME=/usr/games' ]
     assert_that(pysu_env_home('games:daemon'), Equals(['HOME=/usr/games']))
+
+
+def test_help_message(capfd):
+    """
+    When the pysu command is run with the wrong number of arguments, it should
+    print the usage information and exit with code 1.
+    """
+    with ExpectedException(SystemExit, MatchesStructure(code=Equals(1))):
+        main(['pysu', '--help'])
+
+    out_lines, _ = captured_lines(capfd)
+    assert_that(out_lines, Equals([
+        'Usage: pysu user-spec command [args]',
+        '   ie: pysu jamie bash',
+        "       pysu nobody:root bash -c 'whoami && id'",
+        '       pysu 1000:1 id',
+        '',
+    ]))
