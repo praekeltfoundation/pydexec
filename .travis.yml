@@ -20,7 +20,7 @@ before_script:
   - |
     SCRIPT="set -x \
       && pip install --no-cache -r requirements-dev.txt \
-      && pytest --cov \
+      && pytest --cov --cov-report xml \
       && flake8 ."
 script:
   # Run tests inside a container to get a vaguely consistent environment
