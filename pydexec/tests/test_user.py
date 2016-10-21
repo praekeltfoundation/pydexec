@@ -48,7 +48,7 @@ class TestUser(object):
         assert_that(user.home, Equals(current_user.home))
 
     def test_invalid_spec(self):
-        """ Passing an invlaid user spec should raise an exception. """
+        """ Passing an invalid user spec should raise an exception. """
         with ExpectedException(ValueError,
                                r'Invalid user spec string "::"'):
             User.from_spec(u'::')
