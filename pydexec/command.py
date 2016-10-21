@@ -35,6 +35,48 @@ class Command(object):
         self._env = {}
         return self
 
+    def env_arg(self, env_key, default=None, required=False, remove=True):
+        """
+        Add an argument with the value of the ``env_key`` environment variable
+        if it is set.
+
+        :param env_key: environment variable name to use
+        :param default: default value if the environment variable is not set
+        :param required: raise an error if the environment variable is not set
+        :param remove: remove the variable from the command's environment
+        """
+        env_op = self._env.pop if remove else self._env.get
+        env_val = env_op(env_key, default)
+        if env_val is not None:
+            self._args.append(env_val)
+        elif required:
+            raise RuntimeError(
+                'Environment variable "%s" is required to determine an '
+                'argument for program "%s"' % (env_key, self._program))
+        return self
+
+    def env_opt(self, opt_key, env_key, default=None, required=False,
+                remove=True):
+        """
+        Add the option ``opt_key`` with the value of the ``env_key``
+        environment variable if it is set.
+
+        :param opt_key: the option to set (e.g. ``--volume``)
+        :param env_key: environment variable name to use
+        :param default: default value if the environment variable is not set
+        :param required: raise an error if the environment variable is not set
+        :param remove: remove the variable from the command's environment
+        """
+        env_op = self._env.pop if remove else self._env.get
+        env_val = env_op(env_key, default)
+        if env_val is not None:
+            self._args.extend([opt_key, env_val])
+        elif required:
+            raise RuntimeError(
+                'Environment variable "%s" is required to determine option '
+                '"%s" for program "%s"' % (env_key, opt_key, self._program))
+        return self
+
     def user(self, user):
         """
         Set the user to change to before execution. The ``user`` argument
