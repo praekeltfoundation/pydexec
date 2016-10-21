@@ -1,0 +1,5 @@
+-e .
+flake8
+pytest
+pytest-coverage
+testtools
