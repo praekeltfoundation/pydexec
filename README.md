@@ -31,12 +31,27 @@ Things to note:
  2. The `run()` call blocks until the process exits and raises an error if the exit code is non-zero. This is like running a command in a script with `-e` set.
  3. The `exec_()` call replaces the current process with the new one, just like `exec` in a script.
 
+### Environment variables
+A common pattern with Docker containers is to configure programs using environment variables rather than command-line options. `pydexec` offers some tools for working with environment variables that can simplify configuring programs in this way:
+```python
+cmd = Command('my-executable')
+(cmd.env_arg('FOO')                 # arg with value $FOO if set
+    .env_arg('BAR', default='bar')  # arg with value $FOO if set, else 'bar'
+    .env_opt('--foo', 'FOO')        # opt --foo with value $FOO if set
+    .env_opt('--baz', 'BAZ', required=True))
+        # opt --baz with value $BAZ if set, else raise an error
+
+cmd.env_clear()  # remove all environment variables
+cmd.env('FOO', 'bar')  # set $FOO='bar'
+```
+
 ## Functionality
 `pydexec` is still in its early stages and functionality is quite limited. Currently it is possible to:
 * Build commands with an easy-to-use "builder" pattern
 * Run those commands (blocking)
 * Exec those commands
 * Change user before running the command
+* Convert environment variables into program arguments or options
 
 ## Planned functionality
 * More tools for building commands that help in the common cases for Docker entrypoint scripts
