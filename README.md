@@ -1,4 +1,8 @@
 # pydexec
+
+[![Build Status](https://travis-ci.org/praekeltfoundation/pydexec.svg?branch=develop)](https://travis-ci.org/praekeltfoundation/pydexec)
+[![codecov](https://codecov.io/gh/praekeltfoundation/pydexec/branch/develop/graph/badge.svg)](https://codecov.io/gh/praekeltfoundation/pydexec)
+
 Python tools for executing processes in Docker containers
 
 `pydexec` makes it easier to replace entrypoint scripts for Docker containers that would typically be written in Bash (or Bourne shell) with scripts written in Python. Python entrypoint scripts should generally be less error-prone than shell scripts, especially when it comes to issues with string quoting. They are also generally friendlier for people to work on who aren't shell experts.

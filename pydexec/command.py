@@ -15,7 +15,7 @@ class Command(object):
 
     def args(self, *args):
         """ Add a list of extra arguments to the command. """
-        self._args += list(args)
+        self._args.extend(args)
         return self
 
     def env(self, env_key, env_val):
