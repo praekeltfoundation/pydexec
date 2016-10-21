@@ -16,7 +16,6 @@ install:
   - pip install codecov
 
 before_script:
-  - if [[ -z "$NO_COVERAGE" ]]; then COV_OPT='--cov'; fi
   - |
     SCRIPT="set -x \
       && pip install --no-cache -r requirements-dev.txt \
