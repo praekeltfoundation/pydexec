@@ -35,10 +35,11 @@ class Command(object):
         self._env = {}
         return self
 
-    def env_arg(self, env_key, default=None, required=False, remove=True):
+    def env_to_arg(self, env_key, default=None, required=False, remove=True):
         """
-        Add an argument with the value of the ``env_key`` environment variable
-        if it is set.
+        Convert the environment variable ``env_key`` to a program argument, if
+        it is set. Note that this will remove ``env_key`` from the command's
+        environment by default.
 
         :param env_key: environment variable name to use
         :param default: default value if the environment variable is not set
@@ -54,11 +55,12 @@ class Command(object):
                 'argument for program "%s"' % (env_key, self._program))
         return self
 
-    def env_opt(self, opt_key, env_key, default=None, required=False,
-                remove=True):
+    def env_to_opt(self, opt_key, env_key, default=None, required=False,
+                   remove=True):
         """
-        Add the option ``opt_key`` with the value of the ``env_key``
-        environment variable if it is set.
+        Convert the environment variable ``env_key`` to the program options
+        ``opt_key``, if the variable is set. Note that this will remove
+        ``env_key`` from the command's environment by default.
 
         :param opt_key: the option to set (e.g. ``--volume``)
         :param env_key: environment variable name to use
