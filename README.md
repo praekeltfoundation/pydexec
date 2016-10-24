@@ -35,10 +35,10 @@ Things to note:
 A common pattern with Docker containers is to configure programs using environment variables rather than command-line options. `pydexec` offers some tools for working with environment variables that can simplify configuring programs in this way:
 ```python
 cmd = Command('my-executable')
-(cmd.env_arg('FOO')                 # arg with value $FOO if set
-    .env_arg('BAR', default='bar')  # arg with value $FOO if set, else 'bar'
-    .env_opt('--foo', 'FOO')        # opt --foo with value $FOO if set
-    .env_opt('--baz', 'BAZ', required=True))
+(cmd.env_to_arg('FOO')                 # arg with value $FOO if set
+    .env_to_arg('BAR', default='bar')  # arg with value $FOO if set, else 'bar'
+    .env_to_opt('--foo', 'FOO')        # opt --foo with value $FOO if set
+    .env_to_opt('--baz', 'BAZ', required=True))
         # opt --baz with value $BAZ if set, else raise an error
 
 cmd.env_clear()  # remove all environment variables
