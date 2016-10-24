@@ -45,8 +45,7 @@ class Command(object):
         :param required: raise an error if the environment variable is not set
         :param remove: remove the variable from the command's environment
         """
-        env_op = self._env.pop if remove else self._env.get
-        env_val = env_op(env_key, default)
+        env_val = self._env_get(env_key, remove, default)
         if env_val is not None:
             self._args.append(env_val)
         elif required:
@@ -67,8 +66,7 @@ class Command(object):
         :param required: raise an error if the environment variable is not set
         :param remove: remove the variable from the command's environment
         """
-        env_op = self._env.pop if remove else self._env.get
-        env_val = env_op(env_key, default)
+        env_val = self._env_get(env_key, remove, default)
         if env_val is not None:
             self._args.extend([opt_key, env_val])
         elif required:
@@ -76,6 +74,10 @@ class Command(object):
                 'Environment variable "%s" is required to determine option '
                 '"%s" for program "%s"' % (env_key, opt_key, self._program))
         return self
+
+    def _env_get(self, env_key, remove=False, default=None):
+        env_op = self._env.pop if remove else self._env.get
+        return env_op(env_key, default)
 
     def user(self, user):
         """
