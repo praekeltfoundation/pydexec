@@ -46,10 +46,7 @@ class Command(object):
         :param required: raise an error if the environment variable is not set
         :param remove: remove the variable from the command's environment
         """
-        env_val = self._env_get(env_key, remove, default)
-        if env_val is not None:
-            self._args.append(env_val)
-        elif required:
+        if not self._arg_from_env(env_key, remove, default) and required:
             raise RuntimeError(
                 'Environment variable "%s" is required to determine an '
                 'argument for program "%s"' % (env_key, self._program))
@@ -68,18 +65,21 @@ class Command(object):
         :param required: raise an error if the environment variable is not set
         :param remove: remove the variable from the command's environment
         """
-        env_val = self._env_get(env_key, remove, default)
-        if env_val is not None:
-            self._args.extend([opt_key, env_val])
-        elif required:
+        if (not self._arg_from_env(env_key, remove, default, [opt_key]) and
+                required):
             raise RuntimeError(
                 'Environment variable "%s" is required to determine option '
                 '"%s" for program "%s"' % (env_key, opt_key, self._program))
         return self
 
-    def _env_get(self, env_key, remove=False, default=None):
+    def _arg_from_env(self, env_key, remove, default, pre_args=[]):
+        """ Internal shared logic of ``arg_from_env`` and ``opt_from_env``. """
         env_op = self._env.pop if remove else self._env.get
-        return env_op(env_key, default)
+        env_val = env_op(env_key, default)
+        if env_val is not None:
+            self._args.extend(pre_args + [env_val])
+            return True
+        return False
 
     def user(self, user):
         """
