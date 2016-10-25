@@ -42,6 +42,9 @@ cmd = Command('my-executable')
     .opt_from_env('--baz', 'BAZ', required=True))
         # opt --baz with value $BAZ if set, else raise an error
 
+# Don't remove $ABC from the command's environment (the default behaviour)
+cmd.arg_from_env('ABC', remove=False)
+
 cmd.env_clear()  # remove all environment variables
 cmd.env('FOO', 'bar')  # set $FOO='bar'
 ```
