@@ -157,14 +157,14 @@ class TestCommand(object):
         out_lines, _ = captured_lines(capfd)
         assert_that(out_lines, Equals([]))
 
-    def test_env_to_arg(self, capfd):
+    def test_arg_from_env(self, capfd):
         """
         When a program argument is specified via an environment variable, the
         value of the argument should be determined by the environment variable
         and the variable should be removed from the environment.
         """
         cmd = Command('/bin/sh').args('-c', 'echo "$@" && env', '--')
-        cmd.env_to_arg('HOME')  # Pick something that should be in the env
+        cmd.arg_from_env('HOME')  # Pick something that should be in the env
         cmd.run()
 
         out_lines, _ = captured_lines(capfd)
@@ -173,14 +173,14 @@ class TestCommand(object):
         cmd_env = parse_env_output(out_lines)
         assert_that('HOME' in cmd_env, Equals(False))
 
-    def test_env_to_arg_not_present(self, capfd):
+    def test_arg_from_env_not_present(self, capfd):
         """
         When a program argument is specified via an environment variable, but
         the variable is not present in the environment, the argument should not
         be set.
         """
         cmd = Command('/bin/sh').args('-c', 'echo "$@" && env', '--')
-        cmd.env_to_arg('DOESNOTEXIST')
+        cmd.arg_from_env('DOESNOTEXIST')
         cmd.run()
 
         out_lines, _ = captured_lines(capfd)
@@ -189,14 +189,14 @@ class TestCommand(object):
         cmd_env = parse_env_output(out_lines)
         assert_that('DOESNOTEXIST' in cmd_env, Equals(False))
 
-    def test_env_to_arg_no_remove(self, capfd):
+    def test_arg_from_env_no_remove(self, capfd):
         """
         When a program argument is specified via an environment variable, and
         the remove option is set False, the argument should be added and the
         variable should not be removed from the environment.
         """
         cmd = Command('/bin/sh').args('-c', 'echo "$@" && env', '--')
-        cmd.env_to_arg('HOME', remove=False)
+        cmd.arg_from_env('HOME', remove=False)
         cmd.run()
 
         out_lines, _ = captured_lines(capfd)
@@ -205,14 +205,14 @@ class TestCommand(object):
         cmd_env = parse_env_output(out_lines)
         assert_that(cmd_env['HOME'], Equals(os.environ['HOME']))
 
-    def test_env_to_arg_default(self, capfd):
+    def test_arg_from_env_default(self, capfd):
         """
         When a program argument is specified via an environment variable, and a
         default value is provided, then if the variable is not set, the default
         value should be used as the program argument.
         """
         cmd = Command('/bin/sh').args('-c', 'echo "$@" && env', '--')
-        cmd.env_to_arg('DOESNOTEXIST', default='foobar')
+        cmd.arg_from_env('DOESNOTEXIST', default='foobar')
         cmd.run()
 
         out_lines, _ = captured_lines(capfd)
@@ -222,7 +222,7 @@ class TestCommand(object):
         cmd_env = parse_env_output(out_lines)
         assert_that('DOESNOTEXIST' in cmd_env, Equals(False))
 
-    def test_env_to_arg_required(self):
+    def test_arg_from_env_required(self):
         """
         When a program argument is specified via an environment variable, and
         the required option is set True, then if the variable is not set, an
@@ -232,16 +232,16 @@ class TestCommand(object):
             RuntimeError,
             'Environment variable "DOESNOTEXIST" is required to determine an '
                 'argument for program "/bin/sh"'):
-            Command('/bin/sh').env_to_arg('DOESNOTEXIST', required=True)
+            Command('/bin/sh').arg_from_env('DOESNOTEXIST', required=True)
 
-    def test_env_to_opt(self, capfd):
+    def test_opt_from_env(self, capfd):
         """
         When a program option is specified via an environment variable, the
         value of the option should be determined by the environment variable
         and the variable should be removed from the environment.
         """
         cmd = Command('/bin/sh').args('-c', 'echo "$@" && env', '--')
-        cmd.env_to_opt('--home', 'HOME')
+        cmd.opt_from_env('--home', 'HOME')
         cmd.run()
 
         out_lines, _ = captured_lines(capfd)
@@ -251,14 +251,14 @@ class TestCommand(object):
         cmd_env = parse_env_output(out_lines)
         assert_that('HOME' in cmd_env, Equals(False))
 
-    def test_env_to_opt_not_present(self, capfd):
+    def test_opt_from_env_not_present(self, capfd):
         """
         When a program option is specified via an environment variable, but the
         variable is not present in the environment, the option should not be
         set.
         """
         cmd = Command('/bin/sh').args('-c', 'echo "$@" && env', '--')
-        cmd.env_to_opt('--home', 'DOESNOTEXIST')
+        cmd.opt_from_env('--home', 'DOESNOTEXIST')
         cmd.run()
 
         out_lines, _ = captured_lines(capfd)
@@ -267,14 +267,14 @@ class TestCommand(object):
         cmd_env = parse_env_output(out_lines)
         assert_that('DOESNOTEXIST' in cmd_env, Equals(False))
 
-    def test_env_to_opt_no_remove(self, capfd):
+    def test_opt_from_env_no_remove(self, capfd):
         """
         When a program option is specified via an environment variable, and the
         remove option is set False, the option should be added and the variable
         should not be removed from the environment.
         """
         cmd = Command('/bin/sh').args('-c', 'echo "$@" && env', '--')
-        cmd.env_to_opt('--home', 'HOME', remove=False)
+        cmd.opt_from_env('--home', 'HOME', remove=False)
         cmd.run()
 
         out_lines, _ = captured_lines(capfd)
@@ -284,14 +284,14 @@ class TestCommand(object):
         cmd_env = parse_env_output(out_lines)
         assert_that(cmd_env['HOME'], Equals(os.environ['HOME']))
 
-    def test_env_to_opt_default(self, capfd):
+    def test_opt_from_env_default(self, capfd):
         """
         When a program option is specified via an environment variable, and a
         default value is provided, then if the variable is not set, the default
         value should be used as the program option.
         """
         cmd = Command('/bin/sh').args('-c', 'echo "$@" && env', '--')
-        cmd.env_to_opt('--home', 'DOESNOTEXIST', default='foobar')
+        cmd.opt_from_env('--home', 'DOESNOTEXIST', default='foobar')
         cmd.run()
 
         out_lines, _ = captured_lines(capfd)
@@ -301,7 +301,7 @@ class TestCommand(object):
         cmd_env = parse_env_output(out_lines)
         assert_that('DOESNOTEXIST' in cmd_env, Equals(False))
 
-    def test_env_to_opt_required(self):
+    def test_opt_from_env_required(self):
         """
         When a program option is specified via an environment variable, and the
         required option is set True, then if the variable is not set, an
@@ -311,5 +311,5 @@ class TestCommand(object):
             RuntimeError,
             'Environment variable "DOESNOTEXIST" is required to determine '
                 'option "--home" for program "/bin/sh"'):
-            Command('/bin/sh').env_to_opt('--home', 'DOESNOTEXIST',
-                                          required=True)
+            Command('/bin/sh').opt_from_env('--home', 'DOESNOTEXIST',
+                                            required=True)

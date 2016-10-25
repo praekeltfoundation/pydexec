@@ -35,7 +35,7 @@ class Command(object):
         self._env = {}
         return self
 
-    def env_to_arg(self, env_key, default=None, required=False, remove=True):
+    def arg_from_env(self, env_key, default=None, required=False, remove=True):
         """
         Convert the environment variable ``env_key`` to a program argument, if
         it is set. Note that this will remove ``env_key`` from the command's
@@ -55,10 +55,10 @@ class Command(object):
                 'argument for program "%s"' % (env_key, self._program))
         return self
 
-    def env_to_opt(self, opt_key, env_key, default=None, required=False,
-                   remove=True):
+    def opt_from_env(self, opt_key, env_key, default=None, required=False,
+                     remove=True):
         """
-        Convert the environment variable ``env_key`` to the program options
+        Convert the environment variable ``env_key`` to the program option
         ``opt_key``, if the variable is set. Note that this will remove
         ``env_key`` from the command's environment by default.
 
