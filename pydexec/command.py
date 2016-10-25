@@ -46,10 +46,7 @@ class Command(object):
         :param required: raise an error if the environment variable is not set
         :param remove: remove the variable from the command's environment
         """
-        if not self._arg_from_env(env_key, remove, default) and required:
-            raise RuntimeError(
-                'Environment variable "%s" is required to determine an '
-                'argument for program "%s"' % (env_key, self._program))
+        self._arg_from_env(env_key, remove, default, required)
         return self
 
     def opt_from_env(self, opt_key, env_key, default=None, required=False,
@@ -65,21 +62,26 @@ class Command(object):
         :param required: raise an error if the environment variable is not set
         :param remove: remove the variable from the command's environment
         """
-        if (not self._arg_from_env(env_key, remove, default, [opt_key]) and
-                required):
-            raise RuntimeError(
-                'Environment variable "%s" is required to determine option '
-                '"%s" for program "%s"' % (env_key, opt_key, self._program))
+        self._arg_from_env(env_key, remove, default, required, opt=opt_key)
         return self
 
-    def _arg_from_env(self, env_key, remove, default, pre_args=[]):
+    def _arg_from_env(self, env_key, remove, default, required, opt=None):
         """ Internal shared logic of ``arg_from_env`` and ``opt_from_env``. """
         env_op = self._env.pop if remove else self._env.get
         env_val = env_op(env_key, default)
+
+        args = (env_val,)
+        error_target = 'an argument'
+        if opt is not None:
+            args = (opt, env_val)
+            error_target = 'option "%s"' % (opt,)
+
         if env_val is not None:
-            self._args.extend(pre_args + [env_val])
-            return True
-        return False
+            self.args(*args)
+        elif required:
+            raise RuntimeError(
+                'Environment variable "%s" is required to determine %s for '
+                'program "%s"' % (env_key, error_target, self._program))
 
     def user(self, user):
         """
