@@ -20,11 +20,12 @@ def parse_env_output(out_lines):
     return cmd_env
 
 
-class TestCommand(object):
+class TestCommandRun(object):
+    """ Tests for the ``Command`` class when invoking via ``run()``. """
     # Use pytest-style tests rather than testtools so that we can capture
     # stdout/stderr from the file descriptors.
 
-    def test_run_stdout(self, capfd):
+    def test_stdout(self, capfd):
         """
         When a command writes to stdout, that output should be captured and
         written to Python's stdout.
@@ -35,7 +36,7 @@ class TestCommand(object):
         assert_that(out_lines, Equals(['Hello, World!']))
         assert_that(err_lines, Equals([]))
 
-    def test_run_stderr(self, capfd):
+    def test_stderr(self, capfd):
         """
         When a command writes to stderr, that output should be captured and
         written to Python's stderr.
@@ -47,7 +48,7 @@ class TestCommand(object):
         assert_that(out_lines, Equals([]))
         assert_that(err_lines, Equals(['Hello, World!']))
 
-    def test_run_output_unicode(self, capfd):
+    def test_output_unicode(self, capfd):
         """
         When a command writes Unicode to a standard stream, that output should
         be captured and encoded correctly.
@@ -57,7 +58,7 @@ class TestCommand(object):
         out_lines, _ = captured_lines(capfd)
         assert_that(out_lines, Equals(['á, é, í, ó, ú, ü, ñ, ¿, ¡']))
 
-    def test_run_error(self, capfd):
+    def test_error(self, capfd):
         """
         When a command exits with a non-zero return code, an error should be
         raised with the correct information about the result of the command.
@@ -71,7 +72,7 @@ class TestCommand(object):
         out_lines, _ = captured_lines(capfd)
         assert_that(out_lines, Equals(['errored']))
 
-    def test_run_preserves_environment(self, capfd):
+    def test_preserves_environment(self, capfd):
         """
         When a command is run, the environment variables of the parent process
         are preserved.
@@ -85,7 +86,7 @@ class TestCommand(object):
         assert_that(cmd_env, Equals(env))
 
     @pytest.mark.skipif(os.getuid() != 0, reason='requires root')
-    def test_run_switch_user(self, capfd):
+    def test_switch_user(self, capfd):
         """
         When a user is set for the command, the user should be switched to
         before the command is run.
@@ -105,7 +106,7 @@ class TestCommand(object):
         assert_that(out_lines, Equals(['0:0:0']))
 
     @pytest.mark.skipif(os.getuid() != 0, reason='requires root')
-    def test_run_switch_user_preserves_environment(self, capfd):
+    def test_switch_user_preserves_environment(self, capfd):
         """
         When a command is run and a user is set, the environment variables of
         the parent process are preserved, except for the ``HOME`` variable
