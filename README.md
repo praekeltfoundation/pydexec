@@ -42,12 +42,14 @@ cmd = Command('my-executable')
     .opt_from_env('--baz', 'BAZ', required=True))
         # opt --baz with value $BAZ if set, else raise an error
 
-# Don't remove $ABC from the command's environment (the default behaviour)
+# Don't remove $ABC from the command's environment (see note below)
 cmd.arg_from_env('ABC', remove=False)
 
 cmd.env_clear()  # remove all environment variables
 cmd.env('FOO', 'bar')  # set $FOO='bar'
 ```
+
+**Note:** When using the `arg_from_env()` and `opt_from_env()` methods, the variable is removed from the command's environment by default. This design decision was made because it is unlikely that a program will need the same information from both program arguments/options and environment variables. Often, sensitive configuration data (e.g. database credentials) is provided to the container via environment variables and it is best to minimise access to this information.
 
 ## Functionality
 `pydexec` is still in its early stages and functionality is quite limited. Currently it is possible to:
