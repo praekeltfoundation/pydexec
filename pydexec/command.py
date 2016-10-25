@@ -46,8 +46,9 @@ class Command(object):
         :param required: raise an error if the environment variable is not set
         :param remove: remove the variable from the command's environment
         """
-        self._arg_from_env(env_key, remove, default, required)
-        return self
+        env_val = self._arg_from_env(
+            env_key, remove, default, required, 'an argument')
+        return self.args(env_val) if env_val is not None else self
 
     def opt_from_env(self, opt_key, env_key, default=None, required=False,
                      remove=True):
@@ -62,26 +63,21 @@ class Command(object):
         :param required: raise an error if the environment variable is not set
         :param remove: remove the variable from the command's environment
         """
-        self._arg_from_env(env_key, remove, default, required, opt=opt_key)
-        return self
+        env_val = self._arg_from_env(
+            env_key, remove, default, required, 'option "%s"' % (opt_key,))
+        return self.args(opt_key, env_val) if env_val is not None else self
 
-    def _arg_from_env(self, env_key, remove, default, required, opt=None):
-        """ Internal shared logic of ``arg_from_env`` and ``opt_from_env``. """
+    def _arg_from_env(self, env_key, remove, default, required, missing_str):
+        """ Shared logic to fetch a program argument from the environment. """
         env_op = self._env.pop if remove else self._env.get
         env_val = env_op(env_key, default)
 
-        args = (env_val,)
-        error_target = 'an argument'
-        if opt is not None:
-            args = (opt, env_val)
-            error_target = 'option "%s"' % (opt,)
-
-        if env_val is not None:
-            self.args(*args)
-        elif required:
+        if required and env_val is None:
             raise RuntimeError(
                 'Environment variable "%s" is required to determine %s for '
-                'program "%s"' % (env_key, error_target, self._program))
+                'program "%s"' % (env_key, missing_str, self._program))
+
+        return env_val
 
     def user(self, user):
         """
