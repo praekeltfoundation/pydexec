@@ -18,6 +18,67 @@ class Command(object):
         self._args.extend(args)
         return self
 
+    def env(self, env_key, env_val):
+        """
+        Add the environment variable ``env_key`` with the value ``env_val``.
+        """
+        self._env[env_key] = env_val
+        return self
+
+    def env_remove(self, env_key):
+        """ Remove the environment variable ``env_key``. """
+        del self._env[env_key]
+        return self
+
+    def env_clear(self):
+        """ Clear all environment variables. """
+        self._env = {}
+        return self
+
+    def arg_from_env(self, env_key, default=None, required=False, remove=True):
+        """
+        Convert the environment variable ``env_key`` to a program argument, if
+        it is set. Note that this will remove ``env_key`` from the command's
+        environment by default.
+
+        :param env_key: environment variable name to use
+        :param default: default value if the environment variable is not set
+        :param required: raise an error if the environment variable is not set
+        :param remove: remove the variable from the command's environment
+        """
+        env_val = self._arg_from_env(
+            env_key, remove, default, required, 'an argument')
+        return self.args(env_val) if env_val is not None else self
+
+    def opt_from_env(self, opt_key, env_key, default=None, required=False,
+                     remove=True):
+        """
+        Convert the environment variable ``env_key`` to the program option
+        ``opt_key``, if the variable is set. Note that this will remove
+        ``env_key`` from the command's environment by default.
+
+        :param opt_key: the option to set (e.g. ``--volume``)
+        :param env_key: environment variable name to use
+        :param default: default value if the environment variable is not set
+        :param required: raise an error if the environment variable is not set
+        :param remove: remove the variable from the command's environment
+        """
+        env_val = self._arg_from_env(
+            env_key, remove, default, required, 'option "%s"' % (opt_key,))
+        return self.args(opt_key, env_val) if env_val is not None else self
+
+    def _arg_from_env(self, env_key, remove, default, required, missing_str):
+        """ Shared logic to fetch a program argument from the environment. """
+        env_op = self._env.pop if remove else self._env.get
+        env_val = env_op(env_key, default)
+
+        if required and env_val is None:
+            raise RuntimeError(
+                'Environment variable "%s" is required to determine %s for '
+                'program "%s"' % (env_key, missing_str, self._program))
+
+        return env_val
+
     def user(self, user):
         """
         Set the user to change to before execution. The ``user`` argument
