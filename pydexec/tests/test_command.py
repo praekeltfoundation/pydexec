@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import os
+from multiprocessing import Process
 from subprocess import CalledProcessError
 
 import pytest
@@ -20,17 +21,20 @@ def parse_env_output(out_lines):
     return cmd_env
 
 
-class TestCommandRun(object):
-    """ Tests for the ``Command`` class when invoking via ``run()``. """
+class _CommonCommandTests(object):
     # Use pytest-style tests rather than testtools so that we can capture
     # stdout/stderr from the file descriptors.
+
+    def execute(self, cmd):
+        """ Execute the given Command object. """
+        raise NotImplementedError()
 
     def test_stdout(self, capfd):
         """
         When a command writes to stdout, that output should be captured and
         written to Python's stdout.
         """
-        Command('echo').args('Hello, World!').run()
+        self.execute(Command('echo').args('Hello, World!'))
 
         out_lines, err_lines = captured_lines(capfd)
         assert_that(out_lines, Equals(['Hello, World!']))
@@ -41,8 +45,8 @@ class TestCommandRun(object):
         When a command writes to stderr, that output should be captured and
         written to Python's stderr.
         """
-        (Command('awk')
-            .args('BEGIN { print "Hello, World!" > "/dev/stderr" }').run())
+        self.execute(Command('awk')
+                     .args('BEGIN { print "Hello, World!" > "/dev/stderr" }'))
 
         out_lines, err_lines = captured_lines(capfd)
         assert_that(out_lines, Equals([]))
@@ -53,7 +57,7 @@ class TestCommandRun(object):
         When a command writes Unicode to a standard stream, that output should
         be captured and encoded correctly.
         """
-        Command('echo').args('á, é, í, ó, ú, ü, ñ, ¿, ¡').run()
+        self.execute(Command('echo').args('á, é, í, ó, ú, ü, ñ, ¿, ¡'))
 
         out_lines, _ = captured_lines(capfd)
         assert_that(out_lines, Equals(['á, é, í, ó, ú, ü, ñ, ¿, ¡']))
@@ -67,7 +71,8 @@ class TestCommandRun(object):
         with ExpectedException(
             CalledProcessError,
                 'Command .*awk.* returned non-zero exit status 1'):
-            Command('awk').args('BEGIN { print "errored"; exit 1 }').run()
+            self.execute(
+                Command('awk').args('BEGIN { print "errored"; exit 1 }'))
 
         out_lines, _ = captured_lines(capfd)
         assert_that(out_lines, Equals(['errored']))
@@ -78,7 +83,7 @@ class TestCommandRun(object):
         are preserved.
         """
         env = dict(os.environ)
-        Command('env').run()
+        self.execute(Command('env'))
 
         out_lines, _ = captured_lines(capfd)
         cmd_env = parse_env_output(out_lines)
@@ -94,14 +99,14 @@ class TestCommandRun(object):
         cmd = (Command('/bin/sh')
                .args('-c', 'echo "$(id -u):$(id -g):$(id -G)"')
                .user('1000:1000'))
-        cmd.run()
+        self.execute(cmd)
 
         out_lines, _ = captured_lines(capfd)
         assert_that(out_lines, Equals(['1000:1000:1000']))
 
         # Check that we can still run as other users (haven't demoted whole
         # Python process to non-root user)
-        cmd.user('0:0').run()
+        self.execute(cmd.user('0:0'))
         out_lines, _ = captured_lines(capfd)
         assert_that(out_lines, Equals(['0:0:0']))
 
@@ -114,7 +119,7 @@ class TestCommandRun(object):
         """
         env = dict(os.environ)
         cmd = Command('env')
-        cmd.user('1000:1000').run()
+        self.execute(cmd.user('1000:1000'))
 
         out_lines, _ = captured_lines(capfd)
         cmd_env = parse_env_output(out_lines)
@@ -127,7 +132,7 @@ class TestCommandRun(object):
         When environment variables are added to a command, those variables
         should reflect in the child process when the command is run.
         """
-        Command('env').env('FOO', 'bar').run()
+        self.execute(Command('env').env('FOO', 'bar'))
 
         out_lines, _ = captured_lines(capfd)
         cmd_env = parse_env_output(out_lines)
@@ -140,7 +145,7 @@ class TestCommandRun(object):
         """
         cmd = Command('env').env('FOO', 'bar')
 
-        cmd.env_remove('FOO').run()
+        self.execute(cmd.env_remove('FOO'))
 
         out_lines, _ = captured_lines(capfd)
         cmd_env = parse_env_output(out_lines)
@@ -153,7 +158,7 @@ class TestCommandRun(object):
         """
         cmd = Command('env').env('FOO', 'bar')
 
-        cmd.env_clear().run()
+        self.execute(cmd.env_clear())
 
         out_lines, _ = captured_lines(capfd)
         assert_that(out_lines, Equals([]))
@@ -166,7 +171,7 @@ class TestCommandRun(object):
         """
         cmd = Command('/bin/sh').args('-c', 'echo "$@" && env', '--')
         cmd.arg_from_env('HOME')  # Pick something that should be in the env
-        cmd.run()
+        self.execute(cmd)
 
         out_lines, _ = captured_lines(capfd)
         assert_that(out_lines.pop(0), Equals(os.environ['HOME']))
@@ -182,7 +187,7 @@ class TestCommandRun(object):
         """
         cmd = Command('/bin/sh').args('-c', 'echo "$@" && env', '--')
         cmd.arg_from_env('DOESNOTEXIST')
-        cmd.run()
+        self.execute(cmd)
 
         out_lines, _ = captured_lines(capfd)
         assert_that(out_lines.pop(0), Equals(''))
@@ -198,7 +203,7 @@ class TestCommandRun(object):
         """
         cmd = Command('/bin/sh').args('-c', 'echo "$@" && env', '--')
         cmd.arg_from_env('HOME', remove=False)
-        cmd.run()
+        self.execute(cmd)
 
         out_lines, _ = captured_lines(capfd)
         assert_that(out_lines.pop(0), Equals(os.environ['HOME']))
@@ -214,7 +219,7 @@ class TestCommandRun(object):
         """
         cmd = Command('/bin/sh').args('-c', 'echo "$@" && env', '--')
         cmd.arg_from_env('DOESNOTEXIST', default='foobar')
-        cmd.run()
+        self.execute(cmd)
 
         out_lines, _ = captured_lines(capfd)
         assert_that(out_lines.pop(0), Equals('foobar'))
@@ -243,7 +248,7 @@ class TestCommandRun(object):
         """
         cmd = Command('/bin/sh').args('-c', 'echo "$@" && env', '--')
         cmd.opt_from_env('--home', 'HOME')
-        cmd.run()
+        self.execute(cmd)
 
         out_lines, _ = captured_lines(capfd)
         assert_that(out_lines.pop(0),
@@ -260,7 +265,7 @@ class TestCommandRun(object):
         """
         cmd = Command('/bin/sh').args('-c', 'echo "$@" && env', '--')
         cmd.opt_from_env('--home', 'DOESNOTEXIST')
-        cmd.run()
+        self.execute(cmd)
 
         out_lines, _ = captured_lines(capfd)
         assert_that(out_lines.pop(0), Equals(''))
@@ -276,7 +281,7 @@ class TestCommandRun(object):
         """
         cmd = Command('/bin/sh').args('-c', 'echo "$@" && env', '--')
         cmd.opt_from_env('--home', 'HOME', remove=False)
-        cmd.run()
+        self.execute(cmd)
 
         out_lines, _ = captured_lines(capfd)
         assert_that(out_lines.pop(0),
@@ -293,7 +298,7 @@ class TestCommandRun(object):
         """
         cmd = Command('/bin/sh').args('-c', 'echo "$@" && env', '--')
         cmd.opt_from_env('--home', 'DOESNOTEXIST', default='foobar')
-        cmd.run()
+        self.execute(cmd)
 
         out_lines, _ = captured_lines(capfd)
         assert_that(out_lines.pop(0), Equals('--home foobar'))
@@ -314,3 +319,22 @@ class TestCommandRun(object):
                 'option "--home" for program "/bin/sh"'):
             Command('/bin/sh').opt_from_env('--home', 'DOESNOTEXIST',
                                             required=True)
+
+
+class TestCommandRun(_CommonCommandTests):
+    """ Tests for the ``Command`` class when invoking via ``run()``. """
+    def execute(self, cmd):
+        cmd.run()
+
+
+class TestCommandExec(_CommonCommandTests):
+    """ Tests for the ``Command`` class when invoking via ``exec_()``. """
+    def execute(self, cmd):
+        # Run the command in a separate process so that it can be exec-ed
+        p = Process(target=cmd.exec_)
+        p.start()
+        p.join()
+        if p.exitcode:
+            # Simulate a CalledProcessError to simplify tests
+            raise CalledProcessError(p.exitcode, [cmd._program] + cmd._args)
+        return p.exitcode
