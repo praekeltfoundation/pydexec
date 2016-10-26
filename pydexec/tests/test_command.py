@@ -27,7 +27,7 @@ class _CommonCommandTests(object):
 
     def execute(self, cmd):
         """ Execute the given Command object. """
-        raise NotImplementedError()
+        raise NotImplementedError()  # pragma: no cover
 
     def test_stdout(self, capfd):
         """
