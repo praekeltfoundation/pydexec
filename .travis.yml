@@ -9,7 +9,7 @@ language: python
 env:
   - DOCKER_IMAGE=python:2.7-slim
   - DOCKER_IMAGE=python:3.5-slim
-  - DOCKER_IMAGE=pypy:2-5.4.1-slim
+  - DOCKER_IMAGE=pypy:2-slim
 
 install:
   - docker pull $DOCKER_IMAGE
