@@ -12,6 +12,7 @@ class Command(object):
         self._args = []
         self._user = None
         self._env = dict(os.environ)
+        self._workdir = os.getcwd()
 
     def args(self, *args):
         """ Add a list of extra arguments to the command. """
@@ -90,21 +91,36 @@ class Command(object):
         self._user = User.from_spec(user)
         return self
 
+    def workdir(self, directory):
+        """
+        Change the current working directory to the given directory path before
+        executing the command. Note that, unlike the WORKDIR Dockerfile
+        directive, this will not cause the specified directory to be created.
+        """
+        self._workdir = directory
+        return self
+
     def run(self):
         cmd = [self._program] + self._args
 
-        kwargs = {'env': self._env}
+        kwargs = {
+            'env': self._env,
+            'preexec_fn': self._preexec_fn,
+        }
         if self._user is not None:
             env = self._env.copy()
             env['HOME'] = self._user.home
-            kwargs = {
-                'env': env,
-                'preexec_fn': self._user.set_user
-            }
+            kwargs['env'] = env
 
         retcode = Popen(cmd, **kwargs).wait()
         if retcode:
             raise CalledProcessError(retcode, cmd)
+
+    def _preexec_fn(self):
+        if self._user is not None:
+            self._user.set_user()
+
+        os.chdir(self._workdir)
 
     def exec_(self):
         """
@@ -115,5 +131,7 @@ class Command(object):
         if self._user is not None:
             self._user.set_user()
             self._env['HOME'] = self._user.home
+
+        os.chdir(self._workdir)
 
         os.execvpe(self._program, cmd, self._env)
