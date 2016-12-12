@@ -1,12 +1,14 @@
 # -*- coding: utf-8 -*-
+import multiprocessing
 import os
-from multiprocessing import Process
+import sys
+import traceback
 from subprocess import CalledProcessError
 
 import pytest
 from testtools import ExpectedException
 from testtools.assertions import assert_that
-from testtools.matchers import Equals
+from testtools.matchers import Equals, Not
 
 from pydexec.command import Command
 from pydexec.tests.helpers import captured_lines
@@ -25,11 +27,42 @@ def run_cmd(cmd):
     return cmd.run()
 
 
+class ExceptionProcess(multiprocessing.Process):
+    """
+    Multiprocessing Process that can be queried for an exception that occurred
+    in the child process.
+    http://stackoverflow.com/a/33599967
+    """
+    def __init__(self, *args, **kwargs):
+        multiprocessing.Process.__init__(self, *args, **kwargs)
+        self._pconn, self._cconn = multiprocessing.Pipe()
+        self._exception = None
+
+    def run(self):
+        try:
+            multiprocessing.Process.run(self)
+            self._cconn.send(None)
+        except Exception as e:
+            tb = traceback.format_exc()
+            self._cconn.send((e, tb))
+
+    @property
+    def exception(self):
+        if self._pconn.poll():
+            self._exception = self._pconn.recv()
+        return self._exception
+
+
 def exec_cmd(cmd):
     # Run the command in a separate process so that it can be exec-ed
-    p = Process(target=cmd.exec_)
+    p = ExceptionProcess(target=cmd.exec_)
     p.start()
     p.join()
+    if p.exception:
+        error, tb = p.exception
+        print(tb)
+        raise error
+
     if p.exitcode:
         # Simulate a CalledProcessError to simplify tests
         raise CalledProcessError(p.exitcode, [cmd._program] + cmd._args)
@@ -333,3 +366,90 @@ class TestCommand(object):
                 'option "--home" for program "/bin/sh"'):
             Command('/bin/sh').opt_from_env('--home', 'DOESNOTEXIST',
                                             required=True)
+
+    def test_workdir_changes_directory(self, capfd, tmpdir, runner):
+        """
+        When a directory is specified as the 'workdir' for a command, the
+        command's subprocess should be executed with the current working
+        directory as the specified directory.
+        """
+        cwd = os.getcwd()
+
+        runner(Command('/bin/pwd').workdir(str(tmpdir)))
+
+        out_lines, _ = captured_lines(capfd)
+        child_cwd = out_lines.pop(0)
+        assert_that(child_cwd, Equals(str(tmpdir)))
+
+        # Assert only the working directory of the child process has changed
+        assert_that(child_cwd, Not(Equals(cwd)))
+        assert_that(cwd, Equals(os.getcwd()))
+
+    def test_workdir_inherited(self, capfd, runner):
+        """
+        When a command is run its child process should inherit the current
+        working directory.
+        """
+        cwd = os.getcwd()
+
+        runner(Command('/bin/pwd'))
+
+        out_lines, _ = captured_lines(capfd)
+        assert_that(out_lines.pop(0), Equals(cwd))
+
+    def test_workdir_set_at_command_creation(self, capfd, tmpdir, runner):
+        """
+        When a command is run its child process should inherit the current
+        working directory at the time the Command object is initialised and
+        changes to the parent process's current working directory should have
+        no effect on the command.
+        """
+        old_cwd = os.getcwd()
+        new_cwd = str(tmpdir)
+
+        # Command created before chdir
+        cmd = Command('/bin/pwd')
+
+        # Change parent process's current working directory
+        os.chdir(new_cwd)
+        assert_that(os.getcwd(), Equals(new_cwd))
+
+        runner(cmd)
+        out_lines, _ = captured_lines(capfd)
+        assert_that(out_lines.pop(0), Equals(old_cwd))
+
+    @pytest.mark.skipif(sys.version_info >= (3, 0),
+                        reason='only for Python < 3')
+    def test_workdir_does_not_exist(self, capfd, runner):
+        """
+        When the command is run and the specified workdir does not exist, an
+        error is raised.
+        """
+        with ExpectedException(
+            OSError,
+                r"\[Errno 2\] No such file or directory: 'DOESNOTEXIST'"):
+            runner(Command('/bin/pwd').workdir('DOESNOTEXIST'))
+
+    @pytest.mark.skipif(sys.version_info[0] < 3,
+                        reason='requires Python 3')
+    def test_workdir_does_not_exist_exec(self, capfd, runner):
+        """
+        When the command is run and the specified workdir does not exist, an
+        error is raised.
+        """
+        with ExpectedException(
+            FileNotFoundError,  # noqa: F821
+                r"\[Errno 2\] No such file or directory: 'DOESNOTEXIST'"):
+            exec_cmd(Command('/bin/pwd').workdir('DOESNOTEXIST'))
+
+    @pytest.mark.skipif(sys.version_info < (3, 3),
+                        reason='requires Python 3.3')
+    def test_workdir_does_not_exist_run(self, capfd):
+        """
+        When the command is run and the specified workdir does not exist, an
+        error is raised.
+        """
+        from subprocess import SubprocessError
+        with ExpectedException(
+                SubprocessError, r'Exception occurred in preexec_fn\.'):
+            run_cmd(Command('/bin/pwd').workdir('DOESNOTEXIST'))
