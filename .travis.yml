@@ -16,9 +16,12 @@ install:
   - pip install codecov
 
 before_script:
+  # Use our wheelhouse mirror to get a built subprocess32 module
   - |
     SCRIPT='set -x \
-      && pip install --no-cache -r requirements-dev.txt \
+      && pip install --no-cache \
+        --extra-index-url https://jessie.wheelhouse.praekelt.org/simple \
+        -r requirements-dev.txt \
       && coverage run "$(which pytest)" \
       && coverage report -m && coverage xml \
       && flake8 .'
