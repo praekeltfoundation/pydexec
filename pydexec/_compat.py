@@ -8,7 +8,8 @@ if sys.version_info[0] < 3:
         import warnings
         warnings.warn(
             'Running Python 2 without the subprocess32 module. Support is '
-            'offered on a best-effort basis.', RuntimeWarning)
+            'provided on a best-effort basis. Edge cases may be iffy.',
+            RuntimeWarning)
         import subprocess
         has_subprocess32 = False
 else:
