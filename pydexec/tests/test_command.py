@@ -70,6 +70,14 @@ def exec_cmd(cmd):
     return p.exitcode
 
 
+_has_py3_subprocess = (
+    sys.version_info[0] == 3 or 'subprocess32' in sys.modules)
+has_py3_subprocess = pytest.mark.skipif(
+    _has_py3_subprocess, reason='no Python 3 subprocess module available')
+has_py2_subprocess = pytest.mark.skipif(
+    not _has_py3_subprocess, reason='using Python 3 subprocess module')
+
+
 class TestCommand(object):
     # Use pytest-style tests rather than testtools so that we can capture
     # stdout/stderr from the file descriptors.
@@ -433,6 +441,7 @@ class TestCommand(object):
                 r"\[Errno 2\] No such file or directory: 'DOESNOTEXIST'"):
             exec_cmd(Command('/bin/pwd').workdir('DOESNOTEXIST'))
 
+    @has_py3_subprocess
     def test_workdir_does_not_exist_run(self, capfd):
         """
         When the command is run and the specified workdir does not exist, an
@@ -444,4 +453,15 @@ class TestCommand(object):
             exception = subprocess.SubprocessError
         with ExpectedException(
                 exception, r'Exception occurred in preexec_fn\.'):
+            run_cmd(Command('/bin/pwd').workdir('DOESNOTEXIST'))
+
+    @has_py2_subprocess
+    def test_workdir_does_not_exist_run_py2(self, capfd):
+        """
+        When the command is run and the specified workdir does not exist, an
+        error is raised.
+        """
+        with ExpectedException(
+            OSError,
+                r"\[Errno 2\] No such file or directory: 'DOESNOTEXIST'"):
             run_cmd(Command('/bin/pwd').workdir('DOESNOTEXIST'))
