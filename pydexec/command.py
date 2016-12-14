@@ -1,8 +1,8 @@
 from __future__ import print_function
 
 import os
-from subprocess import CalledProcessError, Popen
 
+from pydexec._compat import subprocess
 from pydexec.user import User
 
 
@@ -112,9 +112,9 @@ class Command(object):
             env['HOME'] = self._user.home
             kwargs['env'] = env
 
-        retcode = Popen(cmd, **kwargs).wait()
+        retcode = subprocess.Popen(cmd, **kwargs).wait()
         if retcode:
-            raise CalledProcessError(retcode, cmd)
+            raise subprocess.CalledProcessError(retcode, cmd)
 
     def _preexec_fn(self):
         if self._user is not None:
