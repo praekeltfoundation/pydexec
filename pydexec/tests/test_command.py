@@ -73,9 +73,9 @@ def exec_cmd(cmd):
 _has_py3_subprocess = (
     sys.version_info[0] == 3 or 'subprocess32' in sys.modules)
 has_py3_subprocess = pytest.mark.skipif(
-    _has_py3_subprocess, reason='no Python 3 subprocess module available')
+    not _has_py3_subprocess, reason='no Python 3 subprocess module available')
 has_py2_subprocess = pytest.mark.skipif(
-    not _has_py3_subprocess, reason='using Python 3 subprocess module')
+    _has_py3_subprocess, reason='using Python 3 subprocess module')
 
 
 class TestCommand(object):
