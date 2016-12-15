@@ -3,21 +3,32 @@ import sys
 import tempfile
 import unittest
 
+from testtools.assertions import assert_that
+from testtools.matchers import Equals
+
 from pydexec import _compat
-from pydexec._compat import subprocess
+from pydexec._compat import (
+    CalledProcessError, CompletedProcess, has_subprocess32, subprocess,
+    TimeoutExpired)
 from pydexec.tests.helpers import skipif_not_has_subprocess32
 
-# These tests are a straight copy from cPython 3.6.0 with a few small changes:
-# * Inserted all our classes & the run function from pydexec._compat
-# * Annotations to have pytest skip certain tests if we don't have subprocess32
-# * Style fixes for flake8
-# * A base TestCase class was removed that pokes around in subprocess internals
-#   to ensure that all processes have been shut down after a test. We don't do
-#   that here because we're dealing with 3+ different versions of the
-#   subprocess module :-/
+# NOTE: None of the tests in this file *need* to be run on Python 3.5+ but we
+# do so anyway to ensure compatibility between Python versions.
 
 
 class RunFuncTest(unittest.TestCase):
+    # These tests are a straight copy from cPython 3.5.0 with a few changes:
+    # * Inserted all our classes & the run function from pydexec._compat
+    # * Annotations to have pytest skip certain tests if we don't have
+    #   subprocess32
+    # * Style fixes for flake8
+    # * A base TestCase class was removed that pokes around in subprocess
+    #   internals to ensure that all processes have been shut down after a
+    #   test. We don't do that here because we're dealing with 3+ different
+    #   versions of the subprocess module :-/
+    # * The last test is added (test_process_failure) to ensure coverage of the
+    #   failure case where running the process errors before it starts.
+
     def run_python(self, code, **kwargs):
         """Run Python code in a subprocess using subprocess.run"""
         argv = [sys.executable, "-c", code]
@@ -115,3 +126,62 @@ class RunFuncTest(unittest.TestCase):
             'sys.exit(33 if os.getenv("FRUIT")=="banana" else 31)'),
             env=newenv)
         self.assertEqual(cp.returncode, 33)
+
+    def test_process_failure(self):
+        """
+        When an unexpected error occurs when running the process (e.g. changing
+        to a non-existant directory in the preexec_fn), the error should be
+        re-raised.
+        """
+        def preexec_fn():
+            os.chdir('DOESNOTEXIST')
+
+        if has_subprocess32:
+            msg = 'Exception occurred in preexec_fn.'
+            if sys.version_info > (3, 3):
+                error = subprocess.SubprocessError
+            else:
+                error = RuntimeError
+        else:
+            error = OSError
+            msg = "[Errno 2] No such file or directory: 'DOESNOTEXIST'"
+
+        with self.assertRaises(error) as c:
+            self.run_python('foo', preexec_fn=preexec_fn)
+
+        self.assertEqual(str(c.exception), msg)
+
+
+class TestTimeoutExpired(object):
+    def test_str(self):
+        error = TimeoutExpired('foo', 5)
+        assert_that(str(error),
+                    Equals("Command 'foo' timed out after 5 seconds"))
+
+    def test_stdout_property(self):
+        error = TimeoutExpired('foo', 5)
+        error.stdout = 'bar'
+        assert_that(error.stdout, Equals('bar'))
+        assert_that(error.output, Equals('bar'))
+
+
+class TestCalledProcessError(object):
+    def test_str(self):
+        error = CalledProcessError(5, 'foo')
+        assert_that(str(error),
+                    Equals("Command 'foo' returned non-zero exit status 5"))
+
+    def test_stdout_property(self):
+        error = CalledProcessError(5, 'foo')
+        error.stdout = 'bar'
+        assert_that(error.stdout, Equals('bar'))
+        assert_that(error.output, Equals('bar'))
+
+
+class TestCompletedProcess(object):
+    def test_repr(self):
+        completed_process = CompletedProcess(
+            'foo', 0, stdout='bar', stderr='baz')
+        assert_that(repr(completed_process), Equals(
+            "CompletedProcess(args='foo', returncode=0, stdout='bar', "
+            "stderr='baz')"))

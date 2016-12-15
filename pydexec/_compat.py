@@ -69,12 +69,7 @@ if sys.version_info < (3, 5):
             self.stderr = stderr
 
         def __str__(self):
-            if self.returncode and self.returncode < 0:
-                # PY2: No signal number to enum mapping
-                return "Command '%s' died with signal %r." % (
-                        self.cmd, -self.returncode)
-            else:
-                return "Command '%s' returned non-zero exit status %d." % (
+            return "Command '%s' returned non-zero exit status %d" % (
                         self.cmd, self.returncode)
 
         @property
