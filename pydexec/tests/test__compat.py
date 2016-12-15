@@ -6,9 +6,8 @@ import unittest
 from testtools.assertions import assert_that
 from testtools.matchers import Equals
 
-from pydexec import _compat
 from pydexec._compat import (
-    CalledProcessError, CompletedProcess, subprocess, TimeoutExpired)
+    CalledProcessError, CompletedProcess, run, subprocess, TimeoutExpired)
 from pydexec.tests.helpers import skipif_not_has_subprocess32
 
 # NOTE: None of the tests in this file *need* to be run on Python 3.5+ but we
@@ -32,17 +31,17 @@ class RunFuncTest(unittest.TestCase):
     def run_python(self, code, **kwargs):
         """Run Python code in a subprocess using subprocess.run"""
         argv = [sys.executable, "-c", code]
-        return _compat.run(argv, **kwargs)
+        return run(argv, **kwargs)
 
     def test_returncode(self):
         # call() function with sequence argument
         cp = self.run_python("import sys; sys.exit(47)")
         self.assertEqual(cp.returncode, 47)
-        with self.assertRaises(_compat.CalledProcessError):
+        with self.assertRaises(CalledProcessError):
             cp.check_returncode()
 
     def test_check(self):
-        with self.assertRaises(_compat.CalledProcessError) as c:
+        with self.assertRaises(CalledProcessError) as c:
             self.run_python("import sys; sys.exit(47)", check=True)
         self.assertEqual(c.exception.returncode, 47)
 
@@ -57,7 +56,7 @@ class RunFuncTest(unittest.TestCase):
         # process gets killed when the timeout expires.  If the child isn't
         # killed, this call will deadlock since subprocess.run waits for the
         # child.
-        with self.assertRaises(_compat.TimeoutExpired):
+        with self.assertRaises(TimeoutExpired):
             self.run_python("while True: pass", timeout=0.0001)
 
     def test_capture_stdout(self):
@@ -105,7 +104,7 @@ class RunFuncTest(unittest.TestCase):
 
     @skipif_not_has_subprocess32
     def test_check_output_timeout(self):
-        with self.assertRaises(_compat.TimeoutExpired) as c:
+        with self.assertRaises(TimeoutExpired) as c:
             self.run_python((
                 "import sys, time\n"
                 "sys.stdout.write('BDFL')\n"
