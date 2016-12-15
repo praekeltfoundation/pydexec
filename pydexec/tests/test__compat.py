@@ -8,8 +8,7 @@ from testtools.matchers import Equals
 
 from pydexec import _compat
 from pydexec._compat import (
-    CalledProcessError, CompletedProcess, has_subprocess32, subprocess,
-    TimeoutExpired)
+    CalledProcessError, CompletedProcess, subprocess, TimeoutExpired)
 from pydexec.tests.helpers import skipif_not_has_subprocess32
 
 # NOTE: None of the tests in this file *need* to be run on Python 3.5+ but we
@@ -26,8 +25,9 @@ class RunFuncTest(unittest.TestCase):
     #   internals to ensure that all processes have been shut down after a
     #   test. We don't do that here because we're dealing with 3+ different
     #   versions of the subprocess module :-/
-    # * The last test is added (test_process_failure) to ensure coverage of the
-    #   failure case where running the process errors before it starts.
+    # * The last test is added (test_communicate_failure) to ensure coverage of
+    #   the failure case where an error occurs while communicating with the
+    #   process.
 
     def run_python(self, code, **kwargs):
         """Run Python code in a subprocess using subprocess.run"""
@@ -127,29 +127,16 @@ class RunFuncTest(unittest.TestCase):
             env=newenv)
         self.assertEqual(cp.returncode, 33)
 
-    def test_process_failure(self):
+    def test_communicate_failure(self):
         """
-        When an unexpected error occurs when running the process (e.g. changing
-        to a non-existant directory in the preexec_fn), the error should be
-        re-raised.
+        When an unexpected error occurs when communicating with the process
+        (e.g. we give some non-string/bytes object as input), the error should
+        be re-raised.
         """
-        def preexec_fn():
-            os.chdir('DOESNOTEXIST')
+        with self.assertRaises(TypeError) as c:
+            self.run_python('foo', input=123)
 
-        if has_subprocess32:
-            msg = 'Exception occurred in preexec_fn.'
-            if sys.version_info > (3, 3):
-                error = subprocess.SubprocessError
-            else:
-                error = RuntimeError
-        else:
-            error = OSError
-            msg = "[Errno 2] No such file or directory: 'DOESNOTEXIST'"
-
-        with self.assertRaises(error) as c:
-            self.run_python('foo', preexec_fn=preexec_fn)
-
-        self.assertEqual(str(c.exception), msg)
+        self.assertRegexpMatches(str(c.exception), r"not '?int'?")
 
 
 class TestTimeoutExpired(object):
