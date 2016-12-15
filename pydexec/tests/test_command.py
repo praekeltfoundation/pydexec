@@ -3,13 +3,13 @@ import multiprocessing
 import os
 import sys
 import traceback
-from subprocess import CalledProcessError
 
 import pytest
 from testtools import ExpectedException
 from testtools.assertions import assert_that
 from testtools.matchers import Equals, Not
 
+from pydexec._compat import has_subprocess32, subprocess
 from pydexec.command import Command
 from pydexec.tests.helpers import captured_lines
 
@@ -65,8 +65,15 @@ def exec_cmd(cmd):
 
     if p.exitcode:
         # Simulate a CalledProcessError to simplify tests
-        raise CalledProcessError(p.exitcode, [cmd._program] + cmd._args)
+        raise subprocess.CalledProcessError(
+            p.exitcode, [cmd._program] + cmd._args)
     return p.exitcode
+
+
+skipif_has_subprocess32 = pytest.mark.skipif(
+    has_subprocess32, reason='using Python 3 subprocess module')
+skipif_not_has_subprocess32 = pytest.mark.skipif(
+    not has_subprocess32, reason='no Python 3 subprocess module available')
 
 
 class TestCommand(object):
@@ -117,7 +124,7 @@ class TestCommand(object):
         The stdout or stderr output should still be captured.
         """
         with ExpectedException(
-            CalledProcessError,
+            subprocess.CalledProcessError,
                 'Command .*awk.* returned non-zero exit status 1'):
             runner(Command('awk').args('BEGIN { print "errored"; exit 1 }'))
 
@@ -418,9 +425,36 @@ class TestCommand(object):
         out_lines, _ = captured_lines(capfd)
         assert_that(out_lines.pop(0), Equals(old_cwd))
 
-    @pytest.mark.skipif(sys.version_info >= (3, 0),
-                        reason='only for Python < 3')
-    def test_workdir_does_not_exist(self, capfd, runner):
+    def test_workdir_does_not_exist_exec(self, capfd):
+        """
+        When the command is run and the specified workdir does not exist, an
+        error is raised.
+        """
+        if sys.version_info[0] < 3:
+            exception = OSError
+        else:
+            exception = FileNotFoundError  # noqa: F821
+        with ExpectedException(
+            exception,
+                r"\[Errno 2\] No such file or directory: 'DOESNOTEXIST'"):
+            exec_cmd(Command('/bin/pwd').workdir('DOESNOTEXIST'))
+
+    @skipif_not_has_subprocess32
+    def test_workdir_does_not_exist_run(self, capfd):
+        """
+        When the command is run and the specified workdir does not exist, an
+        error is raised.
+        """
+        if sys.version_info < (3, 3):
+            exception = RuntimeError
+        else:
+            exception = subprocess.SubprocessError
+        with ExpectedException(
+                exception, r'Exception occurred in preexec_fn\.'):
+            run_cmd(Command('/bin/pwd').workdir('DOESNOTEXIST'))
+
+    @skipif_has_subprocess32
+    def test_workdir_does_not_exist_run_py2(self, capfd):
         """
         When the command is run and the specified workdir does not exist, an
         error is raised.
@@ -428,28 +462,4 @@ class TestCommand(object):
         with ExpectedException(
             OSError,
                 r"\[Errno 2\] No such file or directory: 'DOESNOTEXIST'"):
-            runner(Command('/bin/pwd').workdir('DOESNOTEXIST'))
-
-    @pytest.mark.skipif(sys.version_info[0] < 3,
-                        reason='requires Python 3')
-    def test_workdir_does_not_exist_exec(self, capfd, runner):
-        """
-        When the command is run and the specified workdir does not exist, an
-        error is raised.
-        """
-        with ExpectedException(
-            FileNotFoundError,  # noqa: F821
-                r"\[Errno 2\] No such file or directory: 'DOESNOTEXIST'"):
-            exec_cmd(Command('/bin/pwd').workdir('DOESNOTEXIST'))
-
-    @pytest.mark.skipif(sys.version_info < (3, 3),
-                        reason='requires Python 3.3')
-    def test_workdir_does_not_exist_run(self, capfd):
-        """
-        When the command is run and the specified workdir does not exist, an
-        error is raised.
-        """
-        from subprocess import SubprocessError
-        with ExpectedException(
-                SubprocessError, r'Exception occurred in preexec_fn\.'):
             run_cmd(Command('/bin/pwd').workdir('DOESNOTEXIST'))

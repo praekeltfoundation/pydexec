@@ -1,5 +1,11 @@
+import platform
+import sys
 from setuptools import find_packages, setup
 
+
+install_requires = []
+if sys.version_info[0] < 3 and platform.python_implementation() == 'CPython':
+    install_requires.append('subprocess32')
 
 setup(
     name='pydexec',
@@ -24,6 +30,7 @@ setup(
         'Topic :: Software Development :: Libraries :: Python Modules',
     ],
     packages=find_packages(),
+    install_requires=install_requires,
     entry_points={
         'console_scripts': ['pysu = pydexec.pysu:main'],
     }
