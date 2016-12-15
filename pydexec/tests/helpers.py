@@ -1,5 +1,9 @@
 import sys
 
+import pytest
+
+from pydexec._compat import has_subprocess32
+
 
 def captured_lines(capfd):
     """ Read the captured stdout and stderr and parse into lines. """
@@ -19,3 +23,9 @@ def captured_lines(capfd):
     assert err_lines.pop() == ''
 
     return out_lines, err_lines
+
+
+skipif_has_subprocess32 = pytest.mark.skipif(
+    has_subprocess32, reason='using Python 3 subprocess module')
+skipif_not_has_subprocess32 = pytest.mark.skipif(
+    not has_subprocess32, reason='no Python 3 subprocess module available')

@@ -9,9 +9,10 @@ from testtools import ExpectedException
 from testtools.assertions import assert_that
 from testtools.matchers import Equals, Not
 
-from pydexec._compat import has_subprocess32, subprocess
+from pydexec._compat import subprocess
 from pydexec.command import Command
-from pydexec.tests.helpers import captured_lines
+from pydexec.tests.helpers import (
+    captured_lines, skipif_has_subprocess32, skipif_not_has_subprocess32)
 
 
 def parse_env_output(out_lines):
@@ -68,12 +69,6 @@ def exec_cmd(cmd):
         raise subprocess.CalledProcessError(
             p.exitcode, [cmd._program] + cmd._args)
     return p.exitcode
-
-
-skipif_has_subprocess32 = pytest.mark.skipif(
-    has_subprocess32, reason='using Python 3 subprocess module')
-skipif_not_has_subprocess32 = pytest.mark.skipif(
-    not has_subprocess32, reason='no Python 3 subprocess module available')
 
 
 class TestCommand(object):
