@@ -6,7 +6,7 @@ import unittest
 from testtools.assertions import assert_that
 from testtools.matchers import Equals, MatchesRegex
 
-from pydexec._compat import (
+from pydexec._subprocess import (
     CalledProcessError, CompletedProcess, run, subprocess, TimeoutExpired)
 from pydexec.tests.helpers import (
     skipif_has_subprocess32, skipif_not_has_subprocess32)

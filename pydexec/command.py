@@ -2,7 +2,7 @@ from __future__ import print_function
 
 import os
 
-from pydexec._compat import run as subprocess_run
+from pydexec._subprocess import run as subprocess_run
 from pydexec.user import User
 
 

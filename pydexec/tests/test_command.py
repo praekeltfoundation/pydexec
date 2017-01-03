@@ -9,7 +9,7 @@ from testtools import ExpectedException
 from testtools.assertions import assert_that
 from testtools.matchers import Equals, Not
 
-from pydexec._compat import subprocess
+from pydexec._subprocess import subprocess
 from pydexec.command import Command
 from pydexec.tests.helpers import (
     captured_lines, skipif_has_subprocess32, skipif_not_has_subprocess32)

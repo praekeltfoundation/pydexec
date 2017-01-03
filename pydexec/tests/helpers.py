@@ -2,7 +2,7 @@ import sys
 
 import pytest
 
-from pydexec._compat import has_subprocess32
+from pydexec._subprocess import has_subprocess32
 
 
 def captured_lines(capfd):
