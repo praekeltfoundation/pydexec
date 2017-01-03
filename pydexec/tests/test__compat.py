@@ -4,7 +4,7 @@ import tempfile
 import unittest
 
 from testtools.assertions import assert_that
-from testtools.matchers import Equals
+from testtools.matchers import Equals, MatchesRegex
 
 from pydexec._compat import (
     CalledProcessError, CompletedProcess, run, subprocess, TimeoutExpired)
@@ -170,8 +170,10 @@ class TestTimeoutExpired(object):
 class TestCalledProcessError(object):
     def test_str(self):
         error = CalledProcessError(5, 'foo')
-        assert_that(str(error),
-                    Equals("Command 'foo' returned non-zero exit status 5"))
+        assert_that(
+            str(error),
+            # Python 3.6 adds a period to the ends of some error messages :-/
+            MatchesRegex(r"Command 'foo' returned non-zero exit status 5\.?"))
 
     def test_stdout_property(self):
         error = CalledProcessError(5, 'foo')
