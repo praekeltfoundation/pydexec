@@ -155,49 +155,54 @@ if sys.version_info < (3, 5):
             kwargs['stdin'] = subprocess.PIPE
 
         if has_subprocess32:
-            with subprocess.Popen(*popenargs, **kwargs) as process:
-                try:
-                    stdout, stderr = process.communicate(
-                        input, timeout=timeout)
-                except subprocess.TimeoutExpired:
-                    process.kill()
-                    stdout, stderr = process.communicate()
-                    raise TimeoutExpired(process.args, timeout, output=stdout,
-                                         stderr=stderr)
-                except:
-                    process.kill()
-                    process.wait()
-                    raise
-                retcode = process.poll()
-                if check and retcode:
-                    raise CalledProcessError(retcode, process.args,
-                                             output=stdout, stderr=stderr)
-            return CompletedProcess(process.args, retcode, stdout, stderr)
+            return _run(popenargs, kwargs, input, timeout, check)
         else:
-            # PY2: non-subprocess32 is missing a few things...
-            process = subprocess.Popen(*popenargs, **kwargs)
+            return _run_py2(popenargs, kwargs, input, check)
 
-            # No Popen.args
-            cmd = kwargs.get("args")
-            if cmd is None:
-                cmd = popenargs[0]
-
-            # No __enter__()/__exit__()
+    def _run(popenargs, popenkwargs, input, timeout, check):
+        with subprocess.Popen(*popenargs, **popenkwargs) as process:
             try:
-                try:
-                    # No timeout
-                    stdout, stderr = process.communicate(input)
-                except:
-                    process.kill()
-                    process.wait()
-                    raise
-                retcode = process.poll()
-                if check and retcode:
-                    raise CalledProcessError(retcode, cmd,
-                                             output=stdout, stderr=stderr)
-            finally:
+                stdout, stderr = process.communicate(input, timeout=timeout)
+            except subprocess.TimeoutExpired:
+                process.kill()
+                stdout, stderr = process.communicate()
+                raise TimeoutExpired(process.args, timeout, output=stdout,
+                                     stderr=stderr)
+            except:
+                process.kill()
                 process.wait()
-            return CompletedProcess(cmd, retcode, stdout, stderr)
+                raise
+            retcode = process.poll()
+            if check and retcode:
+                raise CalledProcessError(retcode, process.args,
+                                         output=stdout, stderr=stderr)
+        return CompletedProcess(process.args, retcode, stdout, stderr)
+
+    def _run_py2(popenargs, popenkwargs, input, check):
+        # PY2: non-subprocess32 is missing a few things...
+        process = subprocess.Popen(*popenargs, **popenkwargs)
+
+        # No Popen.args
+        cmd = popenkwargs.get('args')
+        if cmd is None:
+            cmd = popenargs[0]
+
+        # No __enter__()/__exit__()
+        try:
+            try:
+                # No timeout
+                stdout, stderr = process.communicate(input)
+            except:
+                process.kill()
+                process.wait()
+                raise
+            retcode = process.poll()
+            if check and retcode:
+                raise CalledProcessError(retcode, cmd,
+                                         output=stdout, stderr=stderr)
+        finally:
+            process.wait()
+        return CompletedProcess(cmd, retcode, stdout, stderr)
 else:
     module = sys.modules[__name__]
     for attr in ['SubprocessError', 'TimeoutExpired', 'CalledProcessError',
