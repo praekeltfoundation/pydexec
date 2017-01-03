@@ -204,10 +204,9 @@ if sys.version_info < (3, 5):
             process.wait()
         return CompletedProcess(cmd, retcode, stdout, stderr)
 else:
-    module = sys.modules[__name__]
-    for attr in ['SubprocessError', 'TimeoutExpired', 'CalledProcessError',
-                 'CompletedProcess', 'run']:
-        setattr(module, attr, getattr(subprocess, attr))
+    from subprocess import (
+        SubprocessError, TimeoutExpired, CalledProcessError, CompletedProcess,
+        run)
 
 __all__ = ['CalledProcessError', 'CompletedProcess', 'has_subprocess32', 'run',
            'subprocess', 'SubprocessError', 'TimeoutExpired']
