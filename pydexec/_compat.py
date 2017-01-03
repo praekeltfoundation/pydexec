@@ -157,6 +157,9 @@ if sys.version_info < (3, 5):
         if has_subprocess32:
             return _run(popenargs, kwargs, input, timeout, check)
         else:
+            if timeout is not None:
+                raise ValueError(
+                    'Timeout not supported with Python 2 subprocess module')
             return _run_py2(popenargs, kwargs, input, check)
 
     def _run(popenargs, popenkwargs, input, timeout, check):

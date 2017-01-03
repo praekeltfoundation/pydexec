@@ -8,7 +8,8 @@ from testtools.matchers import Equals
 
 from pydexec._compat import (
     CalledProcessError, CompletedProcess, run, subprocess, TimeoutExpired)
-from pydexec.tests.helpers import skipif_not_has_subprocess32
+from pydexec.tests.helpers import (
+    skipif_has_subprocess32, skipif_not_has_subprocess32)
 
 # NOTE: None of the tests in this file *need* to be run on Python 3.5+ but we
 # do so anyway to ensure compatibility between Python versions.
@@ -24,9 +25,11 @@ class RunFuncTest(unittest.TestCase):
     #   internals to ensure that all processes have been shut down after a
     #   test. We don't do that here because we're dealing with 3+ different
     #   versions of the subprocess module :-/
-    # * The last test is added (test_communicate_failure) to ensure coverage of
-    #   the failure case where an error occurs while communicating with the
+    # * A test was added (test_communicate_failure) to ensure coverage of the
+    #   failure case where an error occurs while communicating with the
     #   process.
+    # * A test was added for the case where the user tries to provide a timeout
+    #   value but the subprocess module in use does not support timeouts.
 
     def run_python(self, code, **kwargs):
         """Run Python code in a subprocess using subprocess.run"""
@@ -136,6 +139,19 @@ class RunFuncTest(unittest.TestCase):
             self.run_python('foo', input=123)
 
         self.assertRegexpMatches(str(c.exception), r"not '?int'?")
+
+    @skipif_has_subprocess32
+    def test_py2_timeout_not_supported(self):
+        """
+        If a timeout is specified and we're running the Python 2 subprocess
+        module, an error should be raised.
+        """
+        with self.assertRaises(ValueError) as c:
+            self.run_python('import sys; sys.exit(0)', timeout=5)
+
+        self.assertEqual(
+            str(c.exception),
+            'Timeout not supported with Python 2 subprocess module')
 
 
 class TestTimeoutExpired(object):
