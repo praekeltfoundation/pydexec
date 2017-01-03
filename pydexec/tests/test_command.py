@@ -9,9 +9,10 @@ from testtools import ExpectedException
 from testtools.assertions import assert_that
 from testtools.matchers import Equals, Not
 
-from pydexec._compat import has_subprocess32, subprocess
+from pydexec._subprocess import subprocess
 from pydexec.command import Command
-from pydexec.tests.helpers import captured_lines
+from pydexec.tests.helpers import (
+    captured_lines, skipif_has_subprocess32, skipif_not_has_subprocess32)
 
 
 def parse_env_output(out_lines):
@@ -24,7 +25,7 @@ def parse_env_output(out_lines):
 
 
 def run_cmd(cmd):
-    return cmd.run()
+    return cmd.run().returncode
 
 
 class ExceptionProcess(multiprocessing.Process):
@@ -63,17 +64,7 @@ def exec_cmd(cmd):
         print(tb)
         raise error
 
-    if p.exitcode:
-        # Simulate a CalledProcessError to simplify tests
-        raise subprocess.CalledProcessError(
-            p.exitcode, [cmd._program] + cmd._args)
     return p.exitcode
-
-
-skipif_has_subprocess32 = pytest.mark.skipif(
-    has_subprocess32, reason='using Python 3 subprocess module')
-skipif_not_has_subprocess32 = pytest.mark.skipif(
-    not has_subprocess32, reason='no Python 3 subprocess module available')
 
 
 class TestCommand(object):
@@ -83,6 +74,14 @@ class TestCommand(object):
     @pytest.fixture(scope='class', params=[run_cmd, exec_cmd])
     def runner(self, request):
         return request.param
+
+    def test_returns(self, runner):
+        """
+        When we run a process that succeeds it should complete and return an
+        exit code of 0.
+        """
+        returncode = runner(Command('true'))
+        assert_that(returncode, Equals(0))
 
     def test_stdout(self, capfd, runner):
         """
@@ -119,14 +118,12 @@ class TestCommand(object):
 
     def test_error(self, capfd, runner):
         """
-        When a command exits with a non-zero return code, an error should be
-        raised with the correct information about the result of the command.
-        The stdout or stderr output should still be captured.
+        When a command exits with a non-zero return code, that exit code should
+        be surfaced. The stdout or stderr output should still be captured.
         """
-        with ExpectedException(
-            subprocess.CalledProcessError,
-                'Command .*awk.* returned non-zero exit status 1'):
-            runner(Command('awk').args('BEGIN { print "errored"; exit 1 }'))
+        returncode = runner(
+            Command('awk').args('BEGIN { print "errored"; exit 1 }'))
+        assert_that(returncode, Equals(1))
 
         out_lines, _ = captured_lines(capfd)
         assert_that(out_lines, Equals(['errored']))

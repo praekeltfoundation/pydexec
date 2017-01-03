@@ -2,7 +2,7 @@ from __future__ import print_function
 
 import os
 
-from pydexec._compat import subprocess
+from pydexec._subprocess import run as subprocess_run
 from pydexec.user import User
 
 
@@ -101,6 +101,11 @@ class Command(object):
         return self
 
     def run(self):
+        """
+        Run the command and wait for it to finish.
+
+        :rtype: ``CompletedProcess``
+        """
         cmd = [self._program] + self._args
 
         kwargs = {
@@ -112,9 +117,7 @@ class Command(object):
             env['HOME'] = self._user.home
             kwargs['env'] = env
 
-        retcode = subprocess.Popen(cmd, **kwargs).wait()
-        if retcode:
-            raise subprocess.CalledProcessError(retcode, cmd)
+        return subprocess_run(cmd, **kwargs)
 
     def _preexec_fn(self):
         if self._user is not None:
