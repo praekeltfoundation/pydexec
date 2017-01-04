@@ -2,7 +2,7 @@ from __future__ import print_function
 
 import os
 
-from pydexec._subprocess import run as subprocess_run
+from pydexec._subprocess import run as subprocess_run, subprocess
 from pydexec.user import User
 
 
@@ -106,6 +106,19 @@ class Command(object):
 
         :rtype: ``CompletedProcess``
         """
+        popenargs, popenkwargs = self._popenargs()
+        return subprocess_run(*popenargs, **popenkwargs)
+
+    def spawn(self):
+        """
+        Run the command in a subprocess. Do *not* wait for it to finish.
+
+        :rtype: ``subprocess.Popen``
+        """
+        popenargs, popenkwargs = self._popenargs()
+        return subprocess.Popen(*popenargs, **popenkwargs)
+
+    def _popenargs(self):
         cmd = [self._program] + self._args
 
         kwargs = {
@@ -117,7 +130,7 @@ class Command(object):
             env['HOME'] = self._user.home
             kwargs['env'] = env
 
-        return subprocess_run(cmd, **kwargs)
+        return ((cmd,), kwargs)
 
     def _preexec_fn(self):
         if self._user is not None:

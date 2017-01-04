@@ -28,6 +28,10 @@ def run_cmd(cmd):
     return cmd.run().returncode
 
 
+def spawn_cmd(cmd):
+    return cmd.spawn().wait()
+
+
 class ExceptionProcess(multiprocessing.Process):
     """
     Multiprocessing Process that can be queried for an exception that occurred
@@ -71,7 +75,7 @@ class TestCommand(object):
     # Use pytest-style tests rather than testtools so that we can capture
     # stdout/stderr from the file descriptors.
 
-    @pytest.fixture(scope='class', params=[run_cmd, exec_cmd])
+    @pytest.fixture(scope='class', params=[run_cmd, spawn_cmd, exec_cmd])
     def runner(self, request):
         return request.param
 
