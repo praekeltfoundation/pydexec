@@ -14,8 +14,19 @@ class Command(object):
         self._env = dict(os.environ)
         self._workdir = os.getcwd()
 
-    def args(self, *args):
-        """ Add a list of extra arguments to the command. """
+    def args(self, *args, **kwargs):
+        """
+        Add a list of extra arguments to the command.
+
+        :args: the arguments to add
+        :unless_args:
+            don't add the arguments if any of the given arguments are present
+            in the command's existing arguments
+        """
+        unless_args = kwargs.get('unless_args', [])
+        if any(arg in self._args for arg in unless_args):
+            return self
+
         self._args.extend(args)
         return self
 
@@ -36,7 +47,8 @@ class Command(object):
         self._env = {}
         return self
 
-    def arg_from_env(self, env_key, default=None, required=False, remove=True):
+    def arg_from_env(self, env_key, default=None, required=False, remove=True,
+                     unless_args=[]):
         """
         Convert the environment variable ``env_key`` to a program argument, if
         it is set. Note that this will remove ``env_key`` from the command's
@@ -46,13 +58,17 @@ class Command(object):
         :param default: default value if the environment variable is not set
         :param required: raise an error if the environment variable is not set
         :param remove: remove the variable from the command's environment
+        :param unless_args:
+            don't set the argument and don't require the environment variable
+            if any of the given arguments are present in the command's existing
+            arguments
         """
         env_val = self._arg_from_env(
-            env_key, remove, default, required, 'an argument')
+            env_key, remove, default, unless_args, required, 'an argument')
         return self.args(env_val) if env_val is not None else self
 
     def opt_from_env(self, opt_key, env_key, default=None, required=False,
-                     remove=True):
+                     remove=True, unless_args=[]):
         """
         Convert the environment variable ``env_key`` to the program option
         ``opt_key``, if the variable is set. Note that this will remove
@@ -63,15 +79,25 @@ class Command(object):
         :param default: default value if the environment variable is not set
         :param required: raise an error if the environment variable is not set
         :param remove: remove the variable from the command's environment
+        :param unless_args:
+            don't set the option and don't require the environment variable if
+            any of the given arguments are present in the command's existing
+            arguments
         """
         env_val = self._arg_from_env(
-            env_key, remove, default, required, 'option "%s"' % (opt_key,))
+            env_key, remove, default, unless_args, required,
+            'option "%s"' % (opt_key,))
+
         return self.args(opt_key, env_val) if env_val is not None else self
 
-    def _arg_from_env(self, env_key, remove, default, required, missing_str):
+    def _arg_from_env(self, env_key, remove, default, unless_args, required,
+                      missing_str):
         """ Shared logic to fetch a program argument from the environment. """
         env_op = self._env.pop if remove else self._env.get
         env_val = env_op(env_key, default)
+
+        if any(arg in self._args for arg in unless_args):
+            return None
 
         if required and env_val is None:
             raise RuntimeError(

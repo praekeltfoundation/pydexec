@@ -218,6 +218,19 @@ class TestCommand(object):
         out_lines, _ = captured_lines(capfd)
         assert_that(out_lines, Equals([]))
 
+    def test_args_unless_args(self, capfd, runner):
+        """
+        When program arguments are added, and the 'unless_args' parameter
+        specifies arguments that are present in the command's arguments, the
+        new arguments should not be added.
+        """
+        cmd = Command('/bin/sh').args('-c', 'echo "$@"', '--')
+        cmd.args('foo', 'bar', unless_args=['foo', '-c'])
+        runner(cmd)
+
+        out_lines, _ = captured_lines(capfd)
+        assert_that(out_lines.pop(0), Equals(''))
+
     def test_arg_from_env(self, capfd, runner):
         """
         When a program argument is specified via an environment variable, the
@@ -294,6 +307,36 @@ class TestCommand(object):
             'Environment variable "DOESNOTEXIST" is required to determine an '
                 'argument for program "/bin/sh"'):
             Command('/bin/sh').arg_from_env('DOESNOTEXIST', required=True)
+
+    def test_arg_from_env_unless_args(self, capfd, runner):
+        """
+        When a program argument is specified via an environment variable, and
+        the 'unless_args' parameter specifies arguments that are present in the
+        command's arguments, the new arguments should not be added.
+        """
+        cmd = Command('/bin/sh').args('-c', 'echo "$@" && env', '--')
+        cmd.arg_from_env('HOME', unless_args=['foo', '-c'])
+        runner(cmd)
+
+        out_lines, _ = captured_lines(capfd)
+        assert_that(out_lines.pop(0), Equals(''))
+
+        cmd_env = parse_env_output(out_lines)
+        assert_that('HOME' in cmd_env, Equals(False))
+
+    def test_arg_from_env_unless_args_required(self, capfd, runner):
+        """
+        When a program argument is specified via an environment variable, and
+        the 'unless_args' parameter specifies arguments that are present in the
+        command's arguments, and even if the environment variable is required
+        and not present, an error should not be raised.
+        """
+        cmd = Command('/bin/sh').args('-c', 'echo "$@" && env', '--')
+        cmd.arg_from_env('DOESNOTEXIST', required=True, unless_args=['-c'])
+        runner(cmd)
+
+        out_lines, _ = captured_lines(capfd)
+        assert_that(out_lines.pop(0), Equals(''))
 
     def test_opt_from_env(self, capfd, runner):
         """
@@ -374,6 +417,36 @@ class TestCommand(object):
                 'option "--home" for program "/bin/sh"'):
             Command('/bin/sh').opt_from_env('--home', 'DOESNOTEXIST',
                                             required=True)
+
+    def test_opt_from_env_unless_args(self, capfd, runner):
+        """
+        When a program option is specified via an environment variable, and the
+        'unless_args' parameter specifies arguments that are present in the
+        command's arguments, the new arguments should not be added.
+        """
+        cmd = Command('/bin/sh').args('-c', 'echo "$@" && env', '--')
+        cmd.opt_from_env('--home', 'HOME', unless_args=['foo', '-c'])
+        runner(cmd)
+
+        out_lines, _ = captured_lines(capfd)
+        assert_that(out_lines.pop(0), Equals(''))
+
+        cmd_env = parse_env_output(out_lines)
+        assert_that('HOME' in cmd_env, Equals(False))
+
+    def test_opt_from_env_unless_args_required(self, capfd, runner):
+        """
+        When a program option is specified via an environment variable, and the
+        'unless_args' parameter specifies arguments that are present in the
+        command's arguments, and even if the environment variable is required
+        and not present, an error should not be raised.
+        """
+        cmd = Command('/bin/sh').args('-c', 'echo "$@" && env', '--')
+        cmd.arg_from_env('DOESNOTEXIST', required=True, unless_args=['-c'])
+        runner(cmd)
+
+        out_lines, _ = captured_lines(capfd)
+        assert_that(out_lines.pop(0), Equals(''))
 
     def test_workdir_changes_directory(self, capfd, tmpdir, runner):
         """
