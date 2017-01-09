@@ -321,6 +321,7 @@ class TestCommand(object):
         out_lines, _ = captured_lines(capfd)
         assert_that(out_lines.pop(0), Equals(''))
 
+        # The environment variable is still removed even if not used
         cmd_env = parse_env_output(out_lines)
         assert_that('HOME' in cmd_env, Equals(False))
 
@@ -431,6 +432,7 @@ class TestCommand(object):
         out_lines, _ = captured_lines(capfd)
         assert_that(out_lines.pop(0), Equals(''))
 
+        # The environment variable is still removed even if not used
         cmd_env = parse_env_output(out_lines)
         assert_that('HOME' in cmd_env, Equals(False))
 
