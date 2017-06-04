@@ -9,7 +9,6 @@ from testtools import ExpectedException
 from testtools.assertions import assert_that
 from testtools.matchers import Equals, Not
 
-from pydexec._subprocess import subprocess
 from pydexec.command import Command
 from pydexec.tests.helpers import captured_lines
 
@@ -425,7 +424,7 @@ class TestCommand(object):
         out_lines, _ = captured_lines(capfd)
         assert_that(out_lines.pop(0), Equals(old_cwd))
 
-    def test_workdir_does_not_exist_exec(self, capfd):
+    def test_workdir_does_not_exist(self, capfd, runner):
         """
         When the command is run and the specified workdir does not exist, an
         error is raised.
@@ -437,17 +436,4 @@ class TestCommand(object):
         with ExpectedException(
             exception,
                 r"\[Errno 2\] No such file or directory: 'DOESNOTEXIST'"):
-            exec_cmd(Command('/bin/pwd').workdir('DOESNOTEXIST'))
-
-    def test_workdir_does_not_exist_run(self, capfd):
-        """
-        When the command is run and the specified workdir does not exist, an
-        error is raised.
-        """
-        if sys.version_info < (3, 3):
-            exception = RuntimeError
-        else:
-            exception = subprocess.SubprocessError
-        with ExpectedException(
-                exception, r'Exception occurred in preexec_fn\.'):
-            run_cmd(Command('/bin/pwd').workdir('DOESNOTEXIST'))
+            runner(Command('/bin/pwd').workdir('DOESNOTEXIST'))
