@@ -8,8 +8,6 @@ from testtools.matchers import Equals, MatchesRegex
 
 from pydexec._subprocess import (
     CalledProcessError, CompletedProcess, run, subprocess, TimeoutExpired)
-from pydexec.tests.helpers import (
-    skipif_has_subprocess32, skipif_not_has_subprocess32)
 
 # NOTE: None of the tests in this file *need* to be run on Python 3.5+ but we
 # do so anyway to ensure compatibility between Python versions.
@@ -53,7 +51,6 @@ class RunFuncTest(unittest.TestCase):
         cp = self.run_python("import sys; sys.exit(0)", check=True)
         self.assertEqual(cp.returncode, 0)
 
-    @skipif_not_has_subprocess32
     def test_timeout(self):
         # run() function with timeout argument; we want to test that the child
         # process gets killed when the timeout expires.  If the child isn't
@@ -105,7 +102,6 @@ class RunFuncTest(unittest.TestCase):
         self.assertIn('stdin', c.exception.args[0])
         self.assertIn('input', c.exception.args[0])
 
-    @skipif_not_has_subprocess32
     def test_check_output_timeout(self):
         with self.assertRaises(TimeoutExpired) as c:
             self.run_python((
@@ -139,19 +135,6 @@ class RunFuncTest(unittest.TestCase):
             self.run_python('foo', input=123)
 
         self.assertRegexpMatches(str(c.exception), r"not '?int'?")
-
-    @skipif_has_subprocess32
-    def test_py2_timeout_not_supported(self):
-        """
-        If a timeout is specified and we're running the Python 2 subprocess
-        module, an error should be raised.
-        """
-        with self.assertRaises(ValueError) as c:
-            self.run_python('import sys; sys.exit(0)', timeout=5)
-
-        self.assertEqual(
-            str(c.exception),
-            'Timeout not supported with Python 2 subprocess module')
 
 
 class TestTimeoutExpired(object):

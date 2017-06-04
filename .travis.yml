@@ -10,7 +10,7 @@ env:
   - DOCKER_IMAGE=python:2.7-slim
   - DOCKER_IMAGE=python:3.5-slim
   - DOCKER_IMAGE=python:3.6-slim
-  - DOCKER_IMAGE=pypy:2-slim
+  - DOCKER_IMAGE=pypy:3-slim
 
 install:
   - docker pull $DOCKER_IMAGE
