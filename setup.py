@@ -1,10 +1,9 @@
-import platform
 import sys
 from setuptools import find_packages, setup
 
 
 install_requires = []
-if sys.version_info[0] < 3 and platform.python_implementation() == 'CPython':
+if sys.version_info[0] < 3:
     install_requires.append('subprocess32')
 
 setup(
@@ -27,7 +26,9 @@ setup(
         'Programming Language :: Python :: 3.5',
         'Programming Language :: Python :: 3.6',
         'Programming Language :: Python :: Implementation :: CPython',
-        'Programming Language :: Python :: Implementation :: PyPy',
+        # While PyPy3 seems to 'work', we're not currently testing it due to
+        # some bugs it has, so we can't quite claim to support it.
+        # 'Programming Language :: Python :: Implementation :: PyPy',
         'Topic :: Software Development :: Libraries :: Python Modules',
     ],
     packages=find_packages(),

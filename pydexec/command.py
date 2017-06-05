@@ -123,6 +123,7 @@ class Command(object):
 
         kwargs = {
             'env': self._env,
+            'cwd': self._workdir,
             'preexec_fn': self._preexec_fn,
         }
         if self._user is not None:
@@ -135,8 +136,6 @@ class Command(object):
     def _preexec_fn(self):
         if self._user is not None:
             self._user.set_user()
-
-        os.chdir(self._workdir)
 
     def exec_(self):
         """
