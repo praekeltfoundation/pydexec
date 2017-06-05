@@ -19,3 +19,12 @@ def captured_lines(capfd):
     assert err_lines.pop() == ''
 
     return out_lines, err_lines
+
+
+def parse_env_output(out_lines):
+    """ Parse the output of the ``env`` command into a dict. """
+    cmd_env = {}
+    for l in out_lines:
+        env_key, env_val = l.split('=', 1)
+        cmd_env[env_key] = env_val
+    return cmd_env

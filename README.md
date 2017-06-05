@@ -31,22 +31,23 @@ Things to note:
  2. The `run()` call blocks until the process exits and raises an error if the exit code is non-zero. This is like running a command in a script with `-e` set.
  3. The `exec_()` call replaces the current process with the new one, just like `exec` in a script.
 
+## Utilities
 ### Environment variables
-A common pattern with Docker containers is to configure programs using environment variables rather than command-line options. `pydexec` offers some tools for working with environment variables that can simplify configuring programs in this way:
+A pattern sometimes used with Docker containers is to configure programs using environment variables rather than command-line options. `pydexec` offers some tools for working with environment variables that can simplify configuring programs in this way:
 ```python
+from pydexec.command import Command
+from pydexec.utils import arg_from_env, opt_from_env
+
 cmd = Command('my-executable')
-(cmd.arg_from_env('FOO')                 # arg with value $FOO if set
-    .arg_from_env('BAR', default='bar')
-        # arg with value $FOO if set, else 'bar'
-    .opt_from_env('--foo', 'FOO')        # opt --foo with value $FOO if set
-    .opt_from_env('--baz', 'BAZ', required=True))
-        # opt --baz with value $BAZ if set, else raise an error
+arg_from_env(cmd, 'FOO')                 # arg with value $FOO if set
+# arg with value $FOO if set, else 'bar'
+arg_from_env(cmd, 'BAR', default='bar')
+opt_from_env(cmd, '--foo', 'FOO')        # opt --foo with value $FOO if set
+# opt --baz with value $BAZ if set, else raise an error
+opt_from_env(cmd, '--baz', 'BAZ', required=True))
 
 # Don't remove $ABC from the command's environment (see note below)
-cmd.arg_from_env('ABC', remove=False)
-
-cmd.env_clear()  # remove all environment variables
-cmd.env('FOO', 'bar')  # set $FOO='bar'
+arg_from_env(cmd, 'ABC', remove=False)
 ```
 
 **Note:** When using the `arg_from_env()` and `opt_from_env()` methods, the variable is removed from the command's environment by default. This design decision was made because it is unlikely that a program will need the same information from both program arguments/options and environment variables. Often, sensitive configuration data (e.g. database credentials) is provided to the container via environment variables and it is best to minimise access to this information.
